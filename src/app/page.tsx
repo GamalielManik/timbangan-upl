@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from '@/components/Navigation';
+import { Navigation } from '@/components/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PieChart } from '@/components/charts/pie-chart';
