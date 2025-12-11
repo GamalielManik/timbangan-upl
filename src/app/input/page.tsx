@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from '@/components/navigation';
+import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -266,7 +266,7 @@ export default function InputPage() {
                         id={`category-${category.id}`}
                         label={category.name}
                         checked={formData.selected_categories.includes(category.id)}
-                        onChange={(e) => handleCategoryChange(category.id, e.target.checked)}
+                        onChange={(e) => handleCategoryChange(category.id, (e.target as HTMLInputElement).checked)}
                       />
                     ))}
                   </div>

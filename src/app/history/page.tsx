@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from '@/components/navigation';
+import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     startDate: '',
+    endDate: '',
     picName: '',
     ownerName: '',
   });
@@ -190,12 +191,18 @@ export default function HistoryPage() {
             <h2 className="text-lg font-semibold text-gray-900">Filter Data</h2>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Input
                 type="date"
-                label="Tanggal"
+                label="Tanggal Awal"
                 value={filters.startDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+              <Input
+                type="date"
+                label="Tanggal Akhir"
+                value={filters.endDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
               />
               <Input
                 type="text"

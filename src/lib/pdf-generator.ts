@@ -53,15 +53,9 @@ export function generateSessionPDF(session: SessionSummary) {
 
     // Add total row
     tableData.push([
-      {
-        content: 'Total',
-        colSpan: 2,
-        styles: { fontStyle: 'bold' }
-      },
-      {
-        content: (session.total_weight || 0).toFixed(2) + ' kg',
-        styles: { fontStyle: 'bold' }
-      }
+      'Total',
+      '',
+      (session.total_weight || 0).toFixed(2)
     ]);
 
     // Table
