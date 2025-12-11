@@ -7,8 +7,8 @@ import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Modal } from './components/ui/modal';
 import { SessionSummary } from '@/types';
-import { getSessionSummaries, deleteWeighingSession } from '@/lib/supabase/database';
-import { generateSessionPDF } from '@/lib/pdf-generator';
+import { getSessionSummaries, deleteWeighingSession } from './lib/supabase/database';
+import { generateSessionPDF } from './lib/pdf-generator';
 import { Edit, Trash2, Download, Search, Calendar, User, Eye } from 'lucide-react';
 import Link from 'next/link';
 

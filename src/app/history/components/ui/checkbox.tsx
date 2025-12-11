@@ -1,5 +1,5 @@
 import { forwardRef, HTMLAttributes } from 'react';
-import { cn } from './utils';
+import { cn } from '@/lib/utils';
 
 interface CheckboxProps extends Omit<HTMLAttributes<HTMLInputElement>, 'type'> {
   checked?: boolean;
