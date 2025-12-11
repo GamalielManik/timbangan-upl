@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from '@/components/navigation';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Navigation } from './navigation';
+import { Card, CardContent, CardHeader } from './components/ui/card';
+import { Button } from './components/ui/button';
 import { PieChart } from '@/components/charts/pie-chart';
 import { WeeklyDashboard } from '@/types';
 import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from '@/lib/supabase/database';
