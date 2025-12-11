@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from './navigation';
+import { Navigation } from './components/navigation';
 import { Card, CardContent, CardHeader } from './components/ui/card';
 import { Button } from './components/ui/button';
 import { PieChart } from './components/charts/pie-chart';
 import { WeeklyDashboard } from '@/types';
-import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from './lib/supabase/database';
+import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from '@/lib/supabase/database';
 import { TrendingUp, Package, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 

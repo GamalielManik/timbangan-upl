@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Navigation } from './navigation';
-import { Card, CardContent, CardHeader } from './components/ui/card';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Checkbox } from './components/ui/checkbox';
-import { Select } from './components/ui/select';
-import { Toast } from './components/ui/toast';
+import { Navigation } from '../components/navigation';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Checkbox } from '../components/ui/checkbox';
+import { Select } from '../components/ui/select';
+import { Toast } from '../components/ui/toast';
 import { PlasticCategory, SessionFormData } from '@/types';
-import { getPlasticCategories, createWeighingSession, createWeighingItems } from './lib/supabase/database';
+import { getPlasticCategories, createWeighingSession, createWeighingItems } from '@/lib/supabase/database';
 import { Trash2, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FormData extends SessionFormData {

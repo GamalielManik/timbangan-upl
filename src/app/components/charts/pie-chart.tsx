@@ -1,7 +1,7 @@
 'use client';
 
 import { WeeklyDashboard } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn } from '../utils';
 
 interface PieChartProps {
   data: WeeklyDashboard[];
