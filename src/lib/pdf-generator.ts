@@ -9,7 +9,17 @@ export function generateSessionPDF(session: SessionSummary) {
       throw new Error('Data session tidak valid');
     }
 
-    const doc = new jsPDF();
+    // Debug: Log satuan data
+    console.log('PDF Generator - Session items with satuan:', session.items?.map(item => ({
+      category: item.category?.name,
+      satuan: item.satuan
+    })));
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
 
     // Set font to built-in font for better compatibility
     doc.setFont('helvetica');
@@ -49,7 +59,7 @@ export function generateSessionPDF(session: SessionSummary) {
       index + 1,
       item.category?.name || 'Tidak diketahui',
       (item.weight_kg || 0).toFixed(2),
-      item.satuan || '-'
+      item.satuan ? item.satuan : '-'
     ]);
 
     // Add total row
@@ -68,21 +78,24 @@ export function generateSessionPDF(session: SessionSummary) {
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 10,
-        cellPadding: 2,
+        fontSize: 11,
+        cellPadding: 3,
       },
       headStyles: {
         fillColor: [0, 156, 228],
         textColor: 255,
         fontStyle: 'bold',
+        fontSize: 11,
       },
       foot: [],
       columnStyles: {
-        0: { cellWidth: 20, halign: 'center' }, // No
-        1: { cellWidth: 70 }, // Jenis Plastik
-        2: { cellWidth: 45, halign: 'right' }, // Berat
-        3: { cellWidth: 35, halign: 'center' }, // Satuan
+        0: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }, // No
+        1: { cellWidth: 'auto', minCellWidth: 80 }, // Jenis Plastik
+        2: { cellWidth: 60, halign: 'right' }, // Berat
+        3: { cellWidth: 40, halign: 'center' }, // Satuan
       },
+      margin: { left: 14, right: 14 },
+      tableWidth: 'auto',
       didDrawPage: (data) => {
         // Add footer on each page
         doc.setFontSize(9);
