@@ -93,8 +93,8 @@ export function generateSessionPDF(session: SessionSummary) {
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 11,
-        cellPadding: 3,
+        fontSize: 10,
+        cellPadding: 2,
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
       },
@@ -102,20 +102,20 @@ export function generateSessionPDF(session: SessionSummary) {
         fillColor: [0, 156, 228],
         textColor: 255,
         fontStyle: 'bold',
-        fontSize: 11,
+        fontSize: 10,
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245]
       },
       foot: [],
-      tableWidth: 270, // Fixed width for landscape
+      tableWidth: 240, // Reduced width to fit landscape page
       columnStyles: {
-        0: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }, // No
-        1: { cellWidth: 100 }, // Jenis Plastik
-        2: { cellWidth: 70, halign: 'right' }, // Berat
+        0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // No
+        1: { cellWidth: 90 }, // Jenis Plastik
+        2: { cellWidth: 60, halign: 'right' }, // Berat
         3: { cellWidth: 70, halign: 'center', fillColor: [255, 255, 200] }, // Satuan - highlighted
       },
-      margin: { left: 14, right: 14 },
+      margin: { left: 10, right: 10 },
       didDrawPage: (data) => {
         // Add footer on each page
         doc.setFontSize(9);
@@ -129,6 +129,7 @@ export function generateSessionPDF(session: SessionSummary) {
         // Debug: Table information
         console.log('Table rendered successfully');
         console.log('Number of rows:', tableData.length);
+        console.log('Table width used: 240mm');
       },
     });
 
