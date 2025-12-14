@@ -12,8 +12,19 @@ export function generateSessionPDF(session: SessionSummary) {
     // Debug: Log satuan data
     console.log('PDF Generator - Session items with satuan:', session.items?.map(item => ({
       category: item.category?.name,
-      satuan: item.satuan
+      satuan: item.satuan,
+      weight: item.weight_kg
     })));
+
+    // Ensure all items have satuan property
+    if (session.items) {
+      session.items.forEach((item, index) => {
+        if (item.satuan === undefined) {
+          console.warn(`Item ${index} missing satuan property, setting to empty string`);
+          (item as any).satuan = '-';
+        }
+      });
+    }
 
     const doc = new jsPDF({
       orientation: 'landscape',
@@ -55,12 +66,16 @@ export function generateSessionPDF(session: SessionSummary) {
     doc.setFontSize(10);
 
     // Prepare table data with validation
-    const tableData = (session.items || []).map((item, index) => [
-      index + 1,
-      item.category?.name || 'Tidak diketahui',
-      (item.weight_kg || 0).toFixed(2),
-      item.satuan ? item.satuan : '-'
-    ]);
+    const tableData = (session.items || []).map((item, index) => {
+      const satuanValue = item.satuan || '-';
+      console.log(`Item ${index + 1}: category=${item.category?.name}, satuan=${satuanValue}`);
+      return [
+        index + 1,
+        item.category?.name || 'Tidak diketahui',
+        (item.weight_kg || 0).toFixed(2),
+        satuanValue
+      ];
+    });
 
     // Add total row
     tableData.push([
@@ -70,7 +85,7 @@ export function generateSessionPDF(session: SessionSummary) {
       ''
     ]);
 
-    // Table
+    // Table with explicit configuration
     autoTable(doc, {
       head: [['No', 'Jenis Plastik', 'Berat (kg)', 'Satuan']],
       body: tableData,
@@ -80,6 +95,8 @@ export function generateSessionPDF(session: SessionSummary) {
         font: 'helvetica',
         fontSize: 11,
         cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
       },
       headStyles: {
         fillColor: [0, 156, 228],
@@ -87,15 +104,18 @@ export function generateSessionPDF(session: SessionSummary) {
         fontStyle: 'bold',
         fontSize: 11,
       },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
       foot: [],
+      tableWidth: 270, // Fixed width for landscape
       columnStyles: {
-        0: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }, // No
-        1: { cellWidth: 'auto', minCellWidth: 80 }, // Jenis Plastik
-        2: { cellWidth: 60, halign: 'right' }, // Berat
-        3: { cellWidth: 40, halign: 'center' }, // Satuan
+        0: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }, // No
+        1: { cellWidth: 100 }, // Jenis Plastik
+        2: { cellWidth: 70, halign: 'right' }, // Berat
+        3: { cellWidth: 70, halign: 'center', fillColor: [255, 255, 200] }, // Satuan - highlighted
       },
       margin: { left: 14, right: 14 },
-      tableWidth: 'auto',
       didDrawPage: (data) => {
         // Add footer on each page
         doc.setFontSize(9);
@@ -105,6 +125,10 @@ export function generateSessionPDF(session: SessionSummary) {
           doc.internal.pageSize.height - 10,
           { align: 'center' }
         );
+
+        // Debug: Table information
+        console.log('Table rendered successfully');
+        console.log('Number of rows:', tableData.length);
       },
     });
 
