@@ -48,19 +48,21 @@ export function generateSessionPDF(session: SessionSummary) {
     const tableData = (session.items || []).map((item, index) => [
       index + 1,
       item.category?.name || 'Tidak diketahui',
-      (item.weight_kg || 0).toFixed(2)
+      (item.weight_kg || 0).toFixed(2),
+      item.satuan || '-'
     ]);
 
     // Add total row
     tableData.push([
       'Total',
       '',
-      (session.total_weight || 0).toFixed(2)
+      (session.total_weight || 0).toFixed(2),
+      ''
     ]);
 
     // Table
     autoTable(doc, {
-      head: [['No', 'Jenis Plastik', 'Berat (kg)']],
+      head: [['No', 'Jenis Plastik', 'Berat (kg)', 'Satuan']],
       body: tableData,
       startY: yPosition + 10,
       theme: 'grid',
@@ -75,6 +77,12 @@ export function generateSessionPDF(session: SessionSummary) {
         fontStyle: 'bold',
       },
       foot: [],
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' }, // No
+        1: { cellWidth: 80 }, // Jenis Plastik
+        2: { cellWidth: 40, halign: 'right' }, // Berat
+        3: { cellWidth: 30, halign: 'center' }, // Satuan
+      },
       didDrawPage: (data) => {
         // Add footer on each page
         doc.setFontSize(9);

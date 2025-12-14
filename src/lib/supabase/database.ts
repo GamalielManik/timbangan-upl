@@ -240,34 +240,75 @@ export const deleteWeighingSession = async (sessionId: string): Promise<void> =>
 };
 
 export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
-  const { data, error } = await supabase
-    .from('view_weekly_dashboard')
-    .select('*')
-    .order('total_weight', { ascending: false });
+  try {
+    // Get current date and calculate 7 days ago
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
 
-  if (error) {
-    console.error('Error fetching weekly dashboard:', error);
-    throw error;
-  }
+    // Get all weighing items with their categories from the last 7 days
+    const { data, error } = await supabase
+      .from('weighing_items')
+      .select(`
+        weight_kg,
+        plastic_categories (
+          name
+        )
+      `)
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .lte('created_at', today.toISOString());
 
-  if (!data || data.length === 0) {
+    if (error) {
+      console.error('Error fetching weekly dashboard:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Group by category and sum weights
+    const categoryWeights: { [key: string]: number } = {};
+
+    data.forEach(item => {
+      const categoryName = (item.plastic_categories as any)?.name || 'Tidak Diketahui';
+      categoryWeights[categoryName] = (categoryWeights[categoryName] || 0) + (item.weight_kg || 0);
+    });
+
+    const totalWeight = Object.values(categoryWeights).reduce((sum, weight) => sum + weight, 0);
+
+    // Convert to array format and calculate percentages
+    const result = Object.entries(categoryWeights).map(([categoryName, weight]) => ({
+      category_name: categoryName,
+      total_weight: weight,
+      percentage: totalWeight > 0 ? (weight / totalWeight) * 100 : 0
+    }));
+
+    // Sort by weight descending
+    return result.sort((a, b) => b.total_weight - a.total_weight);
+  } catch (error) {
+    console.error('Error in getWeeklyDashboard:', error);
     return [];
   }
-
-  const totalWeight = data.reduce((sum, item) => sum + (item.total_weight || 0), 0);
-
-  return data.map(item => ({
-    category_name: item.category_name || 'Tidak Diketahui',
-    total_weight: item.total_weight || 0,
-    percentage: totalWeight > 0 ? ((item.total_weight || 0) / totalWeight) * 100 : 0
-  }));
 };
 
 export const getThisWeekTotal = async (): Promise<number> => {
   try {
+    // Get current date and calculate 7 days ago
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
+
+    // Get all weighing items from the last 7 days
     const { data, error } = await supabase
-      .from('view_weekly_dashboard')
-      .select('total_weight');
+      .from('weighing_items')
+      .select('weight_kg')
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .lte('created_at', today.toISOString());
 
     if (error) {
       console.error('Error fetching this week total:', error);
@@ -278,7 +319,7 @@ export const getThisWeekTotal = async (): Promise<number> => {
       return 0;
     }
 
-    return data.reduce((sum, item) => sum + (item.total_weight || 0), 0);
+    return data.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
   } catch (error) {
     console.error('Error in getThisWeekTotal:', error);
     return 0;
@@ -317,4 +358,23 @@ export const getThisWeekSessionCount = async (): Promise<number> => {
     console.error('Error in getThisWeekSessionCount:', error);
     return 0;
   }
+};
+
+export const addPlasticCategories = async (categoryNames: string[]): Promise<PlasticCategory[]> => {
+  const newCategories = categoryNames.map(name => ({
+    name: name.trim(),
+    created_at: new Date().toISOString()
+  }));
+
+  const { data, error } = await supabase
+    .from('plastic_categories')
+    .insert(newCategories)
+    .select();
+
+  if (error) {
+    console.error('Error adding plastic categories:', error);
+    throw error;
+  }
+
+  return data || [];
 };

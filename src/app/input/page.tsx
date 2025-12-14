@@ -64,7 +64,7 @@ export default function InputPage() {
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { category_id: 0, weight_kg: 0 }]
+      items: [...prev.items, { category_id: 0, weight_kg: 0, satuan: '' }]
     }));
   };
 
@@ -75,7 +75,7 @@ export default function InputPage() {
     }));
   };
 
-  const updateItem = (index: number, field: 'category_id' | 'weight_kg', value: number) => {
+  const updateItem = (index: number, field: 'category_id' | 'weight_kg' | 'satuan', value: number | string) => {
     setFormData(prev => ({
       ...prev,
       items: prev.items.map((item, i) =>
@@ -139,6 +139,7 @@ export default function InputPage() {
         category_id: item.category_id,
         sequence_number: index + 1,
         weight_kg: item.weight_kg,
+        satuan: item.satuan || undefined,
       }));
 
       await createWeighingItems(itemsToInsert);
@@ -331,6 +332,19 @@ export default function InputPage() {
                           onChange={(e) => updateItem(index, 'weight_kg', Number(e.target.value))}
                           step="0.1"
                           min="0"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Select
+                          label="Satuan"
+                          value={item.satuan || ''}
+                          onChange={(e) => updateItem(index, 'satuan', e.target.value)}
+                          options={[
+                            { value: '', label: '-- Pilih Satuan (Opsional) --' },
+                            { value: 'SAK', label: 'SAK' },
+                            { value: 'PRESS', label: 'PRESS' },
+                            { value: 'BAL', label: 'BAL' }
+                          ]}
                         />
                       </div>
                       <Button

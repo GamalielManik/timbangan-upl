@@ -18,6 +18,7 @@ export interface WeighingItem {
   category_id: number;
   sequence_number: number;
   weight_kg: number;
+  satuan?: 'SAK' | 'PRESS' | 'BAL' | '';
   category?: PlasticCategory;
 }
 
@@ -45,5 +46,6 @@ export interface SessionFormData {
   items: Array<{
     category_id: number;
     weight_kg: number;
+    satuan?: 'SAK' | 'PRESS' | 'BAL' | '';
   }>;
 }
