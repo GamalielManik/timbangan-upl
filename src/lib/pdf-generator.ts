@@ -79,9 +79,9 @@ export function generateSessionPDF(session: SessionSummary) {
       foot: [],
       columnStyles: {
         0: { cellWidth: 20, halign: 'center' }, // No
-        1: { cellWidth: 80 }, // Jenis Plastik
-        2: { cellWidth: 40, halign: 'right' }, // Berat
-        3: { cellWidth: 30, halign: 'center' }, // Satuan
+        1: { cellWidth: 70 }, // Jenis Plastik
+        2: { cellWidth: 45, halign: 'right' }, // Berat
+        3: { cellWidth: 35, halign: 'center' }, // Satuan
       },
       didDrawPage: (data) => {
         // Add footer on each page
