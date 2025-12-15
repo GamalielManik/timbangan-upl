@@ -145,7 +145,7 @@ export default function Dashboard() {
         <Card className="bg-white mb-8">
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-900">
-              Statistik Berat per Kategori (7 Hari Terakhir)
+              Statistik Berat per Kategori (Minggu Ini)
             </h2>
           </CardHeader>
           <CardContent>

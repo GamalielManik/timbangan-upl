@@ -241,14 +241,22 @@ export const deleteWeighingSession = async (sessionId: string): Promise<void> =>
 
 export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
   try {
-    // Get current date and calculate 7 days ago
+    // Get current date and calculate week start (Monday) and end (Sunday)
     const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-    today.setHours(23, 59, 59, 999);
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // Get all weighing items with their categories from the last 7 days
+    // Calculate start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Get all weighing items with their categories from the current week
     const { data, error } = await supabase
       .from('weighing_items')
       .select(`
@@ -257,8 +265,8 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
           name
         )
       `)
-      .gte('created_at', sevenDaysAgo.toISOString())
-      .lte('created_at', today.toISOString());
+      .gte('created_at', startOfWeek.toISOString())
+      .lte('created_at', endOfWeek.toISOString());
 
     if (error) {
       console.error('Error fetching weekly dashboard:', error);
@@ -296,19 +304,27 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
 
 export const getThisWeekTotal = async (): Promise<number> => {
   try {
-    // Get current date and calculate 7 days ago
+    // Get current date and calculate week start (Monday) and end (Sunday)
     const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-    today.setHours(23, 59, 59, 999);
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // Get all weighing items from the last 7 days
+    // Calculate start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Get all weighing items from the current week
     const { data, error } = await supabase
       .from('weighing_items')
       .select('weight_kg')
-      .gte('created_at', sevenDaysAgo.toISOString())
-      .lte('created_at', today.toISOString());
+      .gte('created_at', startOfWeek.toISOString())
+      .lte('created_at', endOfWeek.toISOString());
 
     if (error) {
       console.error('Error fetching this week total:', error);
@@ -328,20 +344,22 @@ export const getThisWeekTotal = async (): Promise<number> => {
 
 export const getThisWeekSessionCount = async (): Promise<number> => {
   try {
-    // Get current week (Sunday to Saturday)
+    // Get current date and calculate week start (Monday) and end (Sunday)
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // Calculate start of current week (Sunday)
+    // Calculate start of current week (Monday)
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // Calculate end of current week (Saturday)
+    // Calculate end of current week (Sunday)
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
+    // Get all weighing sessions from the current week
     const { data, error } = await supabase
       .from('weighing_sessions')
       .select('id')
