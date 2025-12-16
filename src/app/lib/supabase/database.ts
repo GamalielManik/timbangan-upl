@@ -240,45 +240,142 @@ export const deleteWeighingSession = async (sessionId: string): Promise<void> =>
 };
 
 export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
-  const { data, error } = await supabase
-    .from('view_weekly_dashboard')
-    .select('*')
-    .order('total_weight', { ascending: false });
+  try {
+    // Get current date and calculate week start (Monday) and end (Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-  if (error) {
-    console.error('Error fetching weekly dashboard:', error);
-    throw error;
-  }
+    // Calculate start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-  if (!data || data.length === 0) {
+    // Calculate end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Format dates for Supabase query
+    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log('[Dashboard] Filtering between:', startDateStr, 'and', endDateStr);
+
+    // Get all sessions from current week
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id')
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
+
+    if (sessionsError || !sessions || sessions.length === 0) {
+      console.log('No sessions found for current week');
+      return [];
+    }
+
+    // Get all items for these sessions with categories
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('weighing_items')
+      .select(`
+        weight_kg,
+        plastic_categories (
+          name
+        )
+      `)
+      .in('session_id', sessionIds);
+
+    if (itemsError || !items || items.length === 0) {
+      console.log('No items found for sessions');
+      return [];
+    }
+
+    // Group by category and sum weights
+    const categoryWeights: { [key: string]: number } = {};
+    items.forEach(item => {
+      const categoryName = (item.plastic_categories as any)?.name || 'Tidak Diketahui';
+      categoryWeights[categoryName] = (categoryWeights[categoryName] || 0) + (item.weight_kg || 0);
+    });
+
+    const totalWeight = Object.values(categoryWeights).reduce((sum, weight) => sum + weight, 0);
+
+    // Convert to array format and calculate percentages
+    const result = Object.entries(categoryWeights).map(([categoryName, weight]) => ({
+      category_name: categoryName,
+      total_weight: weight,
+      percentage: totalWeight > 0 ? (weight / totalWeight) * 100 : 0
+    }));
+
+    // Sort by weight descending
+    return result.sort((a, b) => b.total_weight - a.total_weight);
+  } catch (error) {
+    console.error('Error in getWeeklyDashboard:', error);
     return [];
   }
-
-  const totalWeight = data.reduce((sum, item) => sum + (item.total_weight || 0), 0);
-
-  return data.map(item => ({
-    category_name: item.category_name || 'Tidak Diketahui',
-    total_weight: item.total_weight || 0,
-    percentage: totalWeight > 0 ? ((item.total_weight || 0) / totalWeight) * 100 : 0
-  }));
 };
 
 export const getThisWeekTotal = async (): Promise<number> => {
   try {
-    const { data, error } = await supabase
-      .from('view_weekly_dashboard')
-      .select('total_weight');
+    // Get current date and calculate week start (Monday) and end (Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    if (error) {
-      console.error('Error fetching this week total:', error);
+    // Calculate start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Format dates for Supabase query
+    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log('Filtering sessions between:', startDateStr, 'and', endDateStr);
+
+    // Get all sessions from current week
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id')
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
+
+    if (sessionsError) {
+      console.error('Error fetching sessions:', sessionsError);
       return 0;
     }
 
-    if (!data || data.length === 0) {
+    if (!sessions || sessions.length === 0) {
+      console.log('No sessions found in current week');
       return 0;
     }
 
-    return data.reduce((sum, item) => sum + (item.total_weight || 0), 0);
+    // Get all items for these sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('weighing_items')
+      .select('weight_kg')
+      .in('session_id', sessionIds);
+
+    if (itemsError) {
+      console.error('Error fetching items:', itemsError);
+      return 0;
+    }
+
+    if (!items || items.length === 0) {
+      console.log('No items found');
+      return 0;
+    }
+
+    const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
+    console.log('Total weight calculated:', totalWeight, 'from', items.length, 'items');
+
+    return totalWeight;
   } catch (error) {
     console.error('Error in getThisWeekTotal:', error);
     return 0;
@@ -287,31 +384,39 @@ export const getThisWeekTotal = async (): Promise<number> => {
 
 export const getThisWeekSessionCount = async (): Promise<number> => {
   try {
-    // Get current week (Sunday to Saturday)
+    // Get current date and calculate week start (Monday) and end (Sunday)
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // Calculate start of current week (Sunday)
+    // Calculate start of current week (Monday)
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // Calculate end of current week (Saturday)
+    // Calculate end of current week (Sunday)
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
+    // Format dates for Supabase query
+    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log('[Session Count] Filtering between:', startDateStr, 'and', endDateStr);
+
     const { data, error } = await supabase
       .from('weighing_sessions')
       .select('id')
-      .gte('transaction_date', startOfWeek.toISOString())
-      .lte('transaction_date', endOfWeek.toISOString());
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
 
     if (error) {
       console.error('Error fetching this week sessions:', error);
       return 0;
     }
 
+    console.log('Sessions found:', data?.length || 0);
     return data?.length || 0;
   } catch (error) {
     console.error('Error in getThisWeekSessionCount:', error);
