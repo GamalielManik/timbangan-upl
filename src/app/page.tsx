@@ -10,17 +10,43 @@ import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from '.
 import { TrendingUp, Package, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
+// Function to get current week number in the month
+const getCurrentWeekNumber = () => {
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstMonday = new Date(firstDayOfMonth);
+
+  // Find the first Monday of the month
+  let dayOfWeek = firstMonday.getDay();
+  let daysToAdd = dayOfWeek === 1 ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
+  firstMonday.setDate(firstDayOfMonth.getDate() + daysToAdd);
+
+  // If today is before the first Monday, it's week 1 (or week 0 of previous month)
+  if (today < firstMonday) {
+    return 1;
+  }
+
+  // Calculate weeks since first Monday
+  const daysSinceFirstMonday = Math.floor((today.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
+  const weekNumber = Math.floor(daysSinceFirstMonday / 7) + 1;
+
+  return weekNumber;
+};
+
 export default function Dashboard() {
   const [weeklyData, setWeeklyData] = useState<WeeklyDashboard[]>([]);
   const [thisWeekTotal, setThisWeekTotal] = useState<number>(0);
   const [sessionCount, setSessionCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentWeekNumber, setCurrentWeekNumber] = useState<number>(1);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setError(null);
+        setCurrentWeekNumber(getCurrentWeekNumber());
+
         const [dashboardData, totalWeight, count] = await Promise.all([
           getWeeklyDashboard(),
           getThisWeekTotal(),
@@ -98,7 +124,7 @@ export default function Dashboard() {
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Minggu Ini</p>
+                  <p className="text-sm font-medium text-gray-500">Total Minggu Ini (Minggu ke-{currentWeekNumber})</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {(thisWeekTotal || 0).toFixed(1)} kg
                   </p>
@@ -114,7 +140,7 @@ export default function Dashboard() {
                   <Package className="h-6 w-6 text-secondary" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Jumlah Barang Masuk Minggu Ini</p>
+                  <p className="text-sm font-medium text-gray-500">Jumlah Barang Masuk (Minggu ke-{currentWeekNumber})</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {sessionCount} Sesi
                   </p>
@@ -145,7 +171,7 @@ export default function Dashboard() {
         <Card className="bg-white mb-8">
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-900">
-              Statistik Berat per Kategori (Minggu Ini)
+              Statistik Berat per Kategori (Minggu ke-{currentWeekNumber})
             </h2>
           </CardHeader>
           <CardContent>
