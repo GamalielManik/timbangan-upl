@@ -244,8 +244,25 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
-    // Get all weighing items with their categories from the current calendar week
-    const { data, error } = await supabase
+    // Get all weighing sessions from the current calendar week
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id')
+      .gte('transaction_date', startOfWeek.toISOString())
+      .lte('transaction_date', endOfWeek.toISOString());
+
+    if (sessionsError) {
+      console.error('Error fetching this week sessions:', sessionsError);
+      return [];
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Get all items for these sessions with their categories
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
       .from('weighing_items')
       .select(`
         weight_kg,
@@ -253,22 +270,21 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
           name
         )
       `)
-      .gte('created_at', startOfWeek.toISOString())
-      .lte('created_at', endOfWeek.toISOString());
+      .in('session_id', sessionIds);
 
-    if (error) {
-      console.error('Error fetching weekly dashboard:', error);
-      throw error;
+    if (itemsError) {
+      console.error('Error fetching weekly dashboard:', itemsError);
+      throw itemsError;
     }
 
-    if (!data || data.length === 0) {
+    if (!items || items.length === 0) {
       return [];
     }
 
     // Group by category and sum weights
     const categoryWeights: { [key: string]: number } = {};
 
-    data.forEach(item => {
+    items.forEach(item => {
       const categoryName = (item.plastic_categories as any)?.name || 'Tidak Diketahui';
       categoryWeights[categoryName] = (categoryWeights[categoryName] || 0) + (item.weight_kg || 0);
     });
@@ -314,23 +330,39 @@ export const getThisWeekTotal = async (): Promise<number> => {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
-    // Get all weighing items from the current calendar week
-    const { data, error } = await supabase
+    // Get all weighing sessions from the current calendar week
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id')
+      .gte('transaction_date', startOfWeek.toISOString())
+      .lte('transaction_date', endOfWeek.toISOString());
+
+    if (sessionsError) {
+      console.error('Error fetching this week sessions:', sessionsError);
+      return 0;
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return 0;
+    }
+
+    // Get all items for these sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
       .from('weighing_items')
       .select('weight_kg')
-      .gte('created_at', startOfWeek.toISOString())
-      .lte('created_at', endOfWeek.toISOString());
+      .in('session_id', sessionIds);
 
-    if (error) {
-      console.error('Error fetching this week total:', error);
+    if (itemsError) {
+      console.error('Error fetching this week items:', itemsError);
       return 0;
     }
 
-    if (!data || data.length === 0) {
+    if (!items || items.length === 0) {
       return 0;
     }
 
-    return data.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
+    return items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
   } catch (error) {
     console.error('Error in getThisWeekTotal:', error);
     return 0;
