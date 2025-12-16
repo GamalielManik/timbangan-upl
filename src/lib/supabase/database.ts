@@ -244,12 +244,18 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
+    // Build the query with explicit date format
+    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log('[Dashboard] Filtering sessions between:', startDateStr, 'and', endDateStr);
+
     // Get all weighing sessions from the current calendar week
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
       .select('id, transaction_date')
-      .gte('transaction_date', startOfWeek.toISOString())
-      .lte('transaction_date', endOfWeek.toISOString());
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
 
     if (sessionsError) {
       console.error('Error fetching this week sessions:', sessionsError);
@@ -308,24 +314,29 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
 
 // Helper function to get current week dates based on calendar week (Monday-Sunday)
 const getCurrentWeekDates = () => {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
   // Calculate start of current week (Monday)
   const startOfWeek = new Date(today);
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back to Monday
   startOfWeek.setDate(today.getDate() - daysFromMonday);
+  // Set time to midnight for consistent filtering
   startOfWeek.setHours(0, 0, 0, 0);
 
   // Calculate end of current week (Sunday)
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  // Set time to end of day for inclusive filtering
   endOfWeek.setHours(23, 59, 59, 999);
 
-  // Debug logging
-  console.log('Today:', today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-  console.log('Start of week (Monday):', startOfWeek.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-  console.log('End of week (Sunday):', endOfWeek.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+  // Debug logging with ISO format for precise debugging
+  console.log('Today:', today.toISOString());
+  console.log('Start of week (Monday):', startOfWeek.toISOString());
+  console.log('End of week (Sunday):', endOfWeek.toISOString());
+  console.log('Start date (local):', startOfWeek.toLocaleDateString('id-ID'));
+  console.log('End date (local):', endOfWeek.toLocaleDateString('id-ID'));
 
   return { startOfWeek, endOfWeek };
 };
@@ -335,12 +346,18 @@ export const getThisWeekTotal = async (): Promise<number> => {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
+    // Build the query with explicit date format
+    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log('Filtering sessions between:', startDateStr, 'and', endDateStr);
+
     // Get all weighing sessions from the current calendar week
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
       .select('id, transaction_date')
-      .gte('transaction_date', startOfWeek.toISOString())
-      .lte('transaction_date', endOfWeek.toISOString());
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
 
     if (sessionsError) {
       console.error('Error fetching this week sessions:', sessionsError);
@@ -354,7 +371,8 @@ export const getThisWeekTotal = async (): Promise<number> => {
 
     console.log('Sessions found in this week:', sessions.length);
     sessions?.forEach(s => {
-      console.log('Session ID:', s.id, 'Date:', new Date(s.transaction_date).toLocaleDateString('id-ID'));
+      const sessionDate = new Date(s.transaction_date).toISOString().split('T')[0];
+      console.log('Session ID:', s.id, 'Transaction Date:', sessionDate);
     });
 
     // Get all items for these sessions
@@ -370,10 +388,19 @@ export const getThisWeekTotal = async (): Promise<number> => {
     }
 
     if (!items || items.length === 0) {
+      console.log('No items found for sessions');
       return 0;
     }
 
-    return items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
+    const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
+    console.log('Total weight calculated:', totalWeight, 'from', items.length, 'items');
+
+    // Log each item weight for debugging
+    items.forEach((item, index) => {
+      console.log(`Item ${index + 1}: ${item.weight_kg} kg`);
+    });
+
+    return totalWeight;
   } catch (error) {
     console.error('Error in getThisWeekTotal:', error);
     return 0;
