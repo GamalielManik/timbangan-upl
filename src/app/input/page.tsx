@@ -10,6 +10,7 @@ import { Select } from '../components/ui/select';
 import { Toast } from '../components/ui/toast';
 import { PlasticCategory, SessionFormData } from '../types';
 import { getPlasticCategories, createWeighingSession, createWeighingItems } from '../lib/supabase/database';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { Trash2, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FormData extends SessionFormData {
@@ -17,23 +18,36 @@ interface FormData extends SessionFormData {
 }
 
 export default function InputPage() {
-  const [step, setStep] = useState(1);
+  const [step, setStep, clearStep] = useLocalStorage('input-form-step', 1);
   const [categories, setCategories] = useState<PlasticCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-  const [formData, setFormData] = useState<FormData>({
+
+  const initialFormData: FormData = {
     transaction_date: new Date().toISOString().split('T')[0],
     pic_name: '',
     owner_name: '',
     selected_categories: [],
     items: [],
     showAllCategories: false,
-  });
+  };
+
+  const [formData, setFormData, clearFormData] = useLocalStorage<FormData>('input-form-data', initialFormData);
 
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Add an empty item if no items exist when switching to step 2
+  useEffect(() => {
+    if (step === 2 && formData.items.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        items: [{ category_id: 0, weight_kg: 0, satuan: '' }]
+      }));
+    }
+  }, [step, formData.items.length, setFormData]);
 
   const fetchCategories = async () => {
     try {
@@ -146,16 +160,9 @@ export default function InputPage() {
 
       showToast('Data berhasil disimpan!', 'success');
 
-      // Reset form
-      setFormData({
-        transaction_date: new Date().toISOString().split('T')[0],
-        pic_name: '',
-        owner_name: '',
-        selected_categories: [],
-        items: [],
-        showAllCategories: false,
-      });
-      setStep(1);
+      // Clear localStorage and reset form
+      clearFormData();
+      clearStep();
     } catch (error) {
       console.error('Error submitting data:', error);
       showToast('Gagal menyimpan data. Silakan coba lagi.', 'error');
@@ -278,10 +285,6 @@ export default function InputPage() {
                     onClick={() => {
                       if (validateStep1()) {
                         setStep(2);
-                        // Initialize one empty item
-                        if (formData.items.length === 0) {
-                          addItem();
-                        }
                       }
                     }}
                     className="flex items-center gap-2"
