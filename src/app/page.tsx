@@ -10,18 +10,27 @@ import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from '.
 import { TrendingUp, Package, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
-// Function to get current week number in the month
+// Function to get current week number in the month (Monday-Sunday based)
 const getCurrentWeekNumber = () => {
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const firstMonday = new Date(firstDayOfMonth);
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  // Get the first day of the month
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
 
   // Find the first Monday of the month
+  const firstMonday = new Date(firstDayOfMonth);
   let dayOfWeek = firstMonday.getDay();
   let daysToAdd = dayOfWeek === 1 ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
   firstMonday.setDate(firstDayOfMonth.getDate() + daysToAdd);
 
-  // If today is before the first Monday, it's week 1 (or week 0 of previous month)
+  // If the first Monday is in the next month, use the first day of month as week 1
+  if (firstMonday.getMonth() !== currentMonth) {
+    firstMonday.setTime(firstDayOfMonth.getTime());
+  }
+
+  // If today is before the first Monday, it's week 1
   if (today < firstMonday) {
     return 1;
   }

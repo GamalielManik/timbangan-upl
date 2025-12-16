@@ -247,7 +247,7 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
     // Get all weighing sessions from the current calendar week
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
-      .select('id')
+      .select('id, transaction_date')
       .gte('transaction_date', startOfWeek.toISOString())
       .lte('transaction_date', endOfWeek.toISOString());
 
@@ -322,6 +322,11 @@ const getCurrentWeekDates = () => {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
+  // Debug logging
+  console.log('Today:', today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+  console.log('Start of week (Monday):', startOfWeek.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+  console.log('End of week (Sunday):', endOfWeek.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+
   return { startOfWeek, endOfWeek };
 };
 
@@ -333,7 +338,7 @@ export const getThisWeekTotal = async (): Promise<number> => {
     // Get all weighing sessions from the current calendar week
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
-      .select('id')
+      .select('id, transaction_date')
       .gte('transaction_date', startOfWeek.toISOString())
       .lte('transaction_date', endOfWeek.toISOString());
 
@@ -343,8 +348,14 @@ export const getThisWeekTotal = async (): Promise<number> => {
     }
 
     if (!sessions || sessions.length === 0) {
+      console.log('No sessions found in this week');
       return 0;
     }
+
+    console.log('Sessions found in this week:', sessions.length);
+    sessions?.forEach(s => {
+      console.log('Session ID:', s.id, 'Date:', new Date(s.transaction_date).toLocaleDateString('id-ID'));
+    });
 
     // Get all items for these sessions
     const sessionIds = sessions.map(s => s.id);
@@ -377,7 +388,7 @@ export const getThisWeekSessionCount = async (): Promise<number> => {
     // Get all weighing sessions from the current calendar week
     const { data, error } = await supabase
       .from('weighing_sessions')
-      .select('id')
+      .select('id, transaction_date')
       .gte('transaction_date', startOfWeek.toISOString())
       .lte('transaction_date', endOfWeek.toISOString());
 
