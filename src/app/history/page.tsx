@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/modal';
-import { SessionSummary } from '../types';
-import { getSessionSummaries, deleteWeighingSession } from '../lib/supabase/database';
-import { generateSessionPDF } from '../lib/pdf-generator';
+import { SessionSummary } from '@/types';
+import { getSessionSummaries, deleteWeighingSession } from '@/lib/supabase/database';
+import { generateSessionPDF } from '@/lib/pdf-generator';
 import { Edit, Trash2, Download, Search, Calendar, User, Eye } from 'lucide-react';
 import Link from 'next/link';
 
@@ -180,9 +180,18 @@ export default function HistoryPage() {
       <Navigation />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Riwayat Penimbangan</h1>
-          <p className="text-gray-600">Kelola dan lihat semua data penimbangan</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Riwayat Penimbangan</h1>
+            <p className="text-gray-600">Kelola dan lihat semua data penimbangan</p>
+          </div>
+          {/* v2.0: Monthly Summary Button */}
+          <Link href="/history/monthly-summary">
+            <Button className="bg-secondary hover:bg-secondary/90">
+              <Calendar className="h-4 w-4 mr-2" />
+              Ringkasan Bulanan
+            </Button>
+          </Link>
         </div>
 
         {/* Filters */}
@@ -383,6 +392,57 @@ export default function HistoryPage() {
                     {selectedSession.owner_name || 'Tidak diketahui'}
                   </p>
                 </div>
+
+                {/* v2.0: Time Tracking Display */}
+                {(selectedSession.start_time || selectedSession.end_time) && (
+                  <>
+                    {selectedSession.start_time && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Awal Timbang
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {new Date(selectedSession.start_time).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            timeZoneName: 'short'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                    {selectedSession.end_time && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Akhir Timbang
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {new Date(selectedSession.end_time).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            timeZoneName: 'short'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                    {selectedSession.start_time && selectedSession.end_time && (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Durasi Penimbangan
+                        </label>
+                        <p className="text-sm font-semibold text-primary">
+                          {(() => {
+                            const duration = new Date(selectedSession.end_time).getTime() - new Date(selectedSession.start_time).getTime();
+                            const minutes = Math.floor(duration / 60000);
+                            const seconds = Math.floor((duration % 60000) / 1000);
+                            return `${minutes} menit ${seconds} detik`;
+                          })()}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Items Table */}

@@ -9,6 +9,8 @@ export interface WeighingSession {
   pic_name: string;
   owner_name: string;
   selected_category_ids: number[];
+  start_time?: string;
+  end_time?: string;
   created_at?: string;
 }
 
@@ -30,6 +32,8 @@ export interface SessionSummary {
   total_items: number;
   total_weight: number;
   items: WeighingItem[];
+  start_time?: string;
+  end_time?: string;
 }
 
 export interface WeeklyDashboard {

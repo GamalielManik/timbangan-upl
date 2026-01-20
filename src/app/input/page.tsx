@@ -24,6 +24,9 @@ export default function InputPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
+  // v2.0: Time tracking state
+  const [startTime, setStartTime] = useState<Date | null>(null);
+
   const initialFormData: FormData = {
     transaction_date: new Date().toISOString().split('T')[0],
     pic_name: '',
@@ -90,6 +93,12 @@ export default function InputPage() {
   };
 
   const updateItem = (index: number, field: 'category_id' | 'weight_kg' | 'satuan', value: number | string) => {
+    // v2.0: Track start time on first weight input
+    if (field === 'weight_kg' && value && Number(value) > 0 && !startTime) {
+      setStartTime(new Date());
+      console.log('[Time Tracking] Start time recorded:', new Date().toISOString());
+    }
+
     setFormData(prev => ({
       ...prev,
       items: prev.items.map((item, i) =>
@@ -141,11 +150,17 @@ export default function InputPage() {
 
     setSubmitting(true);
     try {
+      // v2.0: Record end time
+      const endTime = new Date();
+      console.log('[Time Tracking] End time recorded:', endTime.toISOString());
+
       const session = await createWeighingSession({
         transaction_date: formData.transaction_date,
         pic_name: formData.pic_name.trim(),
         owner_name: formData.owner_name.trim(),
         selected_category_ids: formData.selected_categories,
+        start_time: startTime?.toISOString(),
+        end_time: endTime.toISOString(),
       });
 
       const itemsToInsert = formData.items.map((item, index) => ({
@@ -163,6 +178,7 @@ export default function InputPage() {
       // Clear localStorage and reset form
       clearFormData();
       clearStep();
+      setStartTime(null); // v2.0: Reset start time
     } catch (error) {
       console.error('Error submitting data:', error);
       showToast('Gagal menyimpan data. Silakan coba lagi.', 'error');

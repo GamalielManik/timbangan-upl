@@ -1,5 +1,6 @@
 import { supabase } from './client';
 import { PlasticCategory, WeighingSession, WeighingItem, SessionSummary, WeeklyDashboard } from '@/types';
+import { MonthlyDashboard, MonthlyCategoryBreakdown, MonthlySessionDetail, AvailableMonth } from '@/types/monthly';
 
 export const getPlasticCategories = async (): Promise<PlasticCategory[]> => {
   const { data, error } = await supabase
@@ -127,7 +128,9 @@ export const getSessionSummaries = async (
         owner_name: session.owner_name || '',
         total_items: totalItems,
         total_weight: totalWeight,
-        items: processedItems
+        items: processedItems,
+        start_time: session.start_time,
+        end_time: session.end_time,
       });
     }
 
@@ -448,4 +451,257 @@ export const addPlasticCategories = async (categoryNames: string[]): Promise<Pla
   }
 
   return data || [];
+};
+
+// ============================================================================
+// MONTHLY SUMMARY FUNCTIONS (v2.0)
+// ============================================================================
+
+/**
+ * Get available months that have weighing data
+ */
+export const getAvailableMonths = async (): Promise<AvailableMonth[]> => {
+  try {
+    const { data: sessions, error } = await supabase
+      .from('weighing_sessions')
+      .select('transaction_date')
+      .order('transaction_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching available months:', error);
+      return [];
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Group by year and month
+    const monthMap = new Map<string, { year: number; month: number; count: number }>();
+
+    sessions.forEach(session => {
+      if (!session.transaction_date) return;
+
+      const date = new Date(session.transaction_date);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // 1-12
+      const key = `${year}-${month}`;
+
+      if (monthMap.has(key)) {
+        const existing = monthMap.get(key)!;
+        monthMap.set(key, { ...existing, count: existing.count + 1 });
+      } else {
+        monthMap.set(key, { year, month, count: 1 });
+      }
+    });
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    return Array.from(monthMap.values()).map(({ year, month, count }) => ({
+      year,
+      month,
+      session_count: count,
+      formatted: `${monthNames[month - 1]} ${year}`
+    }));
+  } catch (error) {
+    console.error('Error in getAvailableMonths:', error);
+    return [];
+  }
+};
+
+/**
+ * Get monthly dashboard summary for a specific month
+ */
+export const getMonthlyDashboard = async (year: number, month: number): Promise<MonthlyDashboard | null> => {
+  try {
+    // Calculate start and end of month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Last day of month
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // Get all sessions in this month
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id, transaction_date')
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
+
+    if (sessionsError) {
+      console.error('Error fetching monthly sessions:', sessionsError);
+      return null;
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return null;
+    }
+
+    // Get all items for these sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('weighing_items')
+      .select('weight_kg')
+      .in('session_id', sessionIds);
+
+    if (itemsError) {
+      console.error('Error fetching monthly items:', itemsError);
+      return null;
+    }
+
+    const totalWeight = items?.reduce((sum, item) => sum + (item.weight_kg || 0), 0) || 0;
+    const totalItems = items?.length || 0;
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    return {
+      year,
+      month,
+      month_name: monthNames[month - 1],
+      total_sessions: sessions.length,
+      total_weight: totalWeight,
+      total_items: totalItems
+    };
+  } catch (error) {
+    console.error('Error in getMonthlyDashboard:', error);
+    return null;
+  }
+};
+
+/**
+ * Get category breakdown for a specific month (for pie chart)
+ */
+export const getMonthlyCategoryBreakdown = async (
+  year: number,
+  month: number
+): Promise<MonthlyCategoryBreakdown[]> => {
+  try {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // Get all sessions in this month
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('id')
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr);
+
+    if (sessionsError || !sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Get items with category info
+    const sessionIds = sessions.map(s => s.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('weighing_items')
+      .select(`
+        weight_kg,
+        plastic_categories (
+          name
+        )
+      `)
+      .in('session_id', sessionIds);
+
+    if (itemsError || !items || items.length === 0) {
+      return [];
+    }
+
+    // Group by category
+    const categoryWeights: { [key: string]: { weight: number; count: number } } = {};
+
+    items.forEach(item => {
+      const categoryName = (item.plastic_categories as any)?.name || 'Tidak Diketahui';
+      if (!categoryWeights[categoryName]) {
+        categoryWeights[categoryName] = { weight: 0, count: 0 };
+      }
+      categoryWeights[categoryName].weight += item.weight_kg || 0;
+      categoryWeights[categoryName].count += 1;
+    });
+
+    const totalWeight = Object.values(categoryWeights).reduce((sum, cat) => sum + cat.weight, 0);
+
+    return Object.entries(categoryWeights)
+      .map(([categoryName, { weight, count }]) => ({
+        category_name: categoryName,
+        total_weight: weight,
+        percentage: totalWeight > 0 ? (weight / totalWeight) * 100 : 0,
+        item_count: count
+      }))
+      .sort((a, b) => b.total_weight - a.total_weight);
+  } catch (error) {
+    console.error('Error in getMonthlyCategoryBreakdown:', error);
+    return [];
+  }
+};
+
+/**
+ * Get detailed session list for a specific month
+ */
+export const getMonthlySessions = async (
+  year: number,
+  month: number
+): Promise<MonthlySessionDetail[]> => {
+  try {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('weighing_sessions')
+      .select('*')
+      .gte('transaction_date', startDateStr)
+      .lte('transaction_date', endDateStr)
+      .order('transaction_date', { ascending: false });
+
+    if (sessionsError || !sessions) {
+      return [];
+    }
+
+    const result: MonthlySessionDetail[] = [];
+
+    for (const session of sessions) {
+      const { data: items, error: itemsError } = await supabase
+        .from('weighing_items')
+        .select(`
+          weight_kg,
+          plastic_categories (
+            name
+          )
+        `)
+        .eq('session_id', session.id);
+
+      if (itemsError) continue;
+
+      const totalWeight = items?.reduce((sum, item) => sum + (item.weight_kg || 0), 0) || 0;
+      const categories = Array.from(
+        new Set(items?.map(item => (item.plastic_categories as any)?.name).filter(Boolean))
+      );
+
+      result.push({
+        id: session.id,
+        transaction_date: session.transaction_date,
+        pic_name: session.pic_name,
+        owner_name: session.owner_name,
+        categories: categories,
+        total_weight: totalWeight,
+        item_count: items?.length || 0
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error in getMonthlySessions:', error);
+    return [];
+  }
 };
