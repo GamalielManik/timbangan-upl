@@ -7,7 +7,7 @@ import { Button } from './components/ui/button';
 import { PieChart } from './components/charts/pie-chart';
 import { WeeklyDashboard } from './types';
 import { getWeeklyDashboard, getThisWeekTotal, getThisWeekSessionCount } from './lib/supabase/database';
-import { TrendingUp, Package, PlusCircle } from 'lucide-react';
+import { TrendingUp, Package, PlusCircle, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 // Function to get current week number in the month (Monday-Sunday based)
@@ -195,7 +195,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Link href="/input">
             <Card className="bg-white hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="p-6">
@@ -222,6 +222,22 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <h3 className="text-lg font-semibold text-gray-900">Lihat Riwayat</h3>
                     <p className="text-sm text-gray-500">Kelola dan cetak laporan data penimbangan</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/history/monthly-summary">
+            <Card className="bg-white hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
+                    <Calendar className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Ringkasan Bulanan</h3>
+                    <p className="text-sm text-gray-500">Lihat statistik dan laporan per bulan</p>
                   </div>
                 </div>
               </CardContent>
