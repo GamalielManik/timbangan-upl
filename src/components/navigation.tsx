@@ -20,7 +20,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-3">
             <img
-              src="/logo.svg"
+              src="/timbangan-upl/logo.svg"
               alt="Logo UPL"
               className="h-10 w-auto object-contain"
             />

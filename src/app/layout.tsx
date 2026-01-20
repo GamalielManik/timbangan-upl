@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'BARANG MASUK UPL',
   description: 'Aplikasi Pencatatan Penimbangan Limbah Plastik',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/timbangan-upl/favicon.ico',
   },
 }
 
