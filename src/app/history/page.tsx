@@ -9,7 +9,7 @@ import { Modal } from '../components/ui/modal';
 import { SessionSummary } from '@/types';
 import { getSessionSummaries, deleteWeighingSession } from '@/lib/supabase/database';
 import { generateSessionPDF } from '@/lib/pdf-generator';
-import { Edit, Trash2, Download, Search, Calendar, User, Eye } from 'lucide-react';
+import { Edit, Trash2, Download, Search, Calendar, User, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 
 interface GroupedSessions {
@@ -35,6 +35,11 @@ export default function HistoryPage() {
   const [pdfGenerating, setPdfGenerating] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+
+  // v2.0: Collapse state for hierarchical sections
+  const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set());
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
+  const [collapsedWeeks, setCollapsedWeeks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchSessions();
@@ -118,6 +123,37 @@ export default function HistoryPage() {
       console.error('Error deleting session:', error);
       alert('Gagal menghapus data. Silakan coba lagi.');
     }
+  };
+
+  // v2.0: Toggle collapse functions
+  const toggleYear = (year: string) => {
+    const newSet = new Set(collapsedYears);
+    if (newSet.has(year)) {
+      newSet.delete(year);
+    } else {
+      newSet.add(year);
+    }
+    setCollapsedYears(newSet);
+  };
+
+  const toggleMonth = (yearMonth: string) => {
+    const newSet = new Set(collapsedMonths);
+    if (newSet.has(yearMonth)) {
+      newSet.delete(yearMonth);
+    } else {
+      newSet.add(yearMonth);
+    }
+    setCollapsedMonths(newSet);
+  };
+
+  const toggleWeek = (yearMonthWeek: string) => {
+    const newSet = new Set(collapsedWeeks);
+    if (newSet.has(yearMonthWeek)) {
+      newSet.delete(yearMonthWeek);
+    } else {
+      newSet.add(yearMonthWeek);
+    }
+    setCollapsedWeeks(newSet);
   };
 
   const groupSessionsByDate = (sessions: SessionSummary[]): GroupedSessions => {
@@ -246,100 +282,182 @@ export default function HistoryPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
-            {Object.entries(groupedSessions).map(([year, months]) => (
-              <div key={year}>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">{year}</h2>
+          <div className="space-y-6">
+            {/* Sort years in descending order (newest first) */}
+            {Object.entries(groupedSessions)
+              .sort(([a], [b]) => Number(b) - Number(a))
+              .map(([year, months]) => {
+                const isYearCollapsed = collapsedYears.has(year);
 
-                {Object.entries(months).map(([month, weeks]) => (
-                  <div key={month} className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3 ml-2">{month}</h3>
+                return (
+                  <div key={year} className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Year Header - Clickable */}
+                    <button
+                      onClick={() => toggleYear(year)}
+                      className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 transition-colors"
+                    >
+                      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        {isYearCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                        {year}
+                      </h2>
+                      <span className="text-sm text-gray-600">
+                        {Object.values(months).reduce((total, weeks) =>
+                          total + Object.values(weeks).reduce((sum, sessions) => sum + sessions.length, 0), 0
+                        )} sesi
+                      </span>
+                    </button>
 
-                    {Object.entries(weeks).map(([week, weekSessions]) => (
-                      <div key={week} className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-600 mb-2 ml-4">{week}</h4>
+                    {/* Year Content */}
+                    {!isYearCollapsed && (
+                      <div className="p-4 space-y-4">
+                        {/* Sort months in descending order (newest first) */}
+                        {Object.entries(months)
+                          .sort(([a], [b]) => {
+                            const monthOrder = ['Desember', 'November', 'Oktober', 'September', 'Agustus', 'Juli', 'Juni', 'Mei', 'April', 'Maret', 'Februari', 'Januari'];
+                            return monthOrder.indexOf(a) - monthOrder.indexOf(b);
+                          })
+                          .map(([month, weeks]) => {
+                            const yearMonth = `${year}-${month}`;
+                            const isMonthCollapsed = collapsedMonths.has(yearMonth);
 
-                        <div className="space-y-3 ml-4">
-                          {weekSessions.map((session) => (
-                            <Card key={session.id} className="bg-white hover:shadow-md transition-shadow">
-                              <CardContent className="p-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                  <div className="flex-1">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Calendar className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-700">
-                                          {session.transaction_date ?
-                                            new Date(session.transaction_date).toLocaleDateString('id-ID', {
-                                              weekday: 'long',
-                                              year: 'numeric',
-                                              month: 'long',
-                                              day: 'numeric'
-                                            }) : 'Tanggal tidak diketahui'
-                                          }
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <User className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-700">{session.pic_name || 'Tidak diketahui'}</span>
-                                      </div>
-                                      <div className="text-sm font-semibold text-gray-900">
-                                        {(session.total_weight || 0).toFixed(1)} kg ({session.total_items || 0} item)
-                                      </div>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Pemilik: {session.owner_name || 'Tidak diketahui'}</p>
+                            return (
+                              <div key={month} className="border border-gray-200 rounded-lg overflow-hidden">
+                                {/* Month Header - Clickable */}
+                                <button
+                                  onClick={() => toggleMonth(yearMonth)}
+                                  className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-secondary/10 to-secondary/5 hover:from-secondary/15 hover:to-secondary/10 transition-colors"
+                                >
+                                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                    {isMonthCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                    {month}
+                                  </h3>
+                                  <span className="text-sm text-gray-600">
+                                    {Object.values(weeks).reduce((sum, sessions) => sum + sessions.length, 0)} sesi
+                                  </span>
+                                </button>
+
+                                {/* Month Content */}
+                                {!isMonthCollapsed && (
+                                  <div className="p-3 space-y-3">
+                                    {/* Sort weeks in descending order (newest first) */}
+                                    {Object.entries(weeks)
+                                      .sort(([a], [b]) => {
+                                        const weekNumA = parseInt(a.split(' ')[1]);
+                                        const weekNumB = parseInt(b.split(' ')[1]);
+                                        return weekNumB - weekNumA;
+                                      })
+                                      .map(([week, weekSessions]) => {
+                                        const yearMonthWeek = `${year}-${month}-${week}`;
+                                        const isWeekCollapsed = collapsedWeeks.has(yearMonthWeek);
+
+                                        return (
+                                          <div key={week} className="border border-gray-200 rounded-lg overflow-hidden">
+                                            {/* Week Header - Clickable */}
+                                            <button
+                                              onClick={() => toggleWeek(yearMonthWeek)}
+                                              className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                                            >
+                                              <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                                {isWeekCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                                {week}
+                                              </h4>
+                                              <span className="text-xs text-gray-600">{weekSessions.length} sesi</span>
+                                            </button>
+
+                                            {/* Week Content - Sessions */}
+                                            {!isWeekCollapsed && (
+                                              <div className="p-2 space-y-2 bg-white">
+                                                {/* Sort sessions by date descending (newest first) */}
+                                                {weekSessions
+                                                  .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
+                                                  .map((session) => (
+                                                    <Card key={session.id} className="bg-white hover:shadow-md transition-shadow border-l-4 border-l-primary">
+                                                      <CardContent className="p-4">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                          <div className="flex-1">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                                                              <div className="flex items-center gap-2 text-sm">
+                                                                <Calendar className="h-4 w-4 text-gray-400" />
+                                                                <span className="text-gray-700">
+                                                                  {session.transaction_date ?
+                                                                    new Date(session.transaction_date).toLocaleDateString('id-ID', {
+                                                                      weekday: 'long',
+                                                                      year: 'numeric',
+                                                                      month: 'long',
+                                                                      day: 'numeric'
+                                                                    }) : 'Tanggal tidak diketahui'
+                                                                  }
+                                                                </span>
+                                                              </div>
+                                                              <div className="flex items-center gap-2 text-sm">
+                                                                <User className="h-4 w-4 text-gray-400" />
+                                                                <span className="text-gray-700">{session.pic_name || 'Tidak diketahui'}</span>
+                                                              </div>
+                                                              <div className="text-sm font-semibold text-gray-900">
+                                                                {(session.total_weight || 0).toFixed(1)} kg ({session.total_items || 0} item)
+                                                              </div>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600">Pemilik: {session.owner_name || 'Tidak diketahui'}</p>
+                                                          </div>
+
+                                                          <div className="flex gap-2">
+                                                            <Button
+                                                              variant="outline"
+                                                              size="sm"
+                                                              onClick={() => handleViewDetail(session)}
+                                                              className="text-indigo-600 hover:text-indigo-700"
+                                                              title="Lihat Detail"
+                                                            >
+                                                              <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                            <Link href={`/input?edit=${session.id}`}>
+                                                              <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700" title="Edit">
+                                                                <Edit className="h-4 w-4" />
+                                                              </Button>
+                                                            </Link>
+                                                            <Button
+                                                              variant="outline"
+                                                              size="sm"
+                                                              onClick={() => handlePrintPDF(session.id)}
+                                                              className="text-green-600 hover:text-green-700"
+                                                              disabled={pdfGenerating === session.id}
+                                                              title="Download PDF"
+                                                            >
+                                                              {pdfGenerating === session.id ? (
+                                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                                                              ) : (
+                                                                <Download className="h-4 w-4" />
+                                                              )}
+                                                            </Button>
+                                                            <Button
+                                                              variant="outline"
+                                                              size="sm"
+                                                              onClick={() => handleDeleteClick(session.id)}
+                                                              className="text-red-600 hover:text-red-700"
+                                                              title="Hapus"
+                                                            >
+                                                              <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                          </div>
+                                                        </div>
+                                                      </CardContent>
+                                                    </Card>
+                                                  ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                   </div>
-
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleViewDetail(session)}
-                                      className="text-indigo-600 hover:text-indigo-700"
-                                      title="Lihat Detail"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    <Link href={`/input?edit=${session.id}`}>
-                                      <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700" title="Edit">
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </Link>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handlePrintPDF(session.id)}
-                                      className="text-green-600 hover:text-green-700"
-                                      disabled={pdfGenerating === session.id}
-                                      title="Download PDF"
-                                    >
-                                      {pdfGenerating === session.id ? (
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
-                                      ) : (
-                                        <Download className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleDeleteClick(session.id)}
-                                      className="text-red-600 hover:text-red-700"
-                                      title="Hapus"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
-                    ))}
+                    )}
                   </div>
-                ))}
-              </div>
-            ))}
+                );
+              })}
           </div>
         )}
 
@@ -585,7 +703,7 @@ export default function HistoryPage() {
             </div>
           </div>
         </Modal>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 }
