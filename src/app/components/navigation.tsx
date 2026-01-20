@@ -20,13 +20,9 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-3">
             <img
-              src="/logo.png"
+              src="/timbangan-upl/logo.svg"
               alt="Logo UPL"
               className="h-10 w-auto object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
             />
             <span className="text-xl font-bold text-gray-900">BARANG MASUK UPL</span>
           </Link>
