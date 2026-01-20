@@ -193,11 +193,188 @@ export function generateSessionPDF(session: SessionSummary) {
     doc.setTextColor(0);
 
     // Save the PDF
-    const fileName = `laporan_penimbangan_${session.id}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    doc.save(`laporan_penimbangan_${session.id}_${new Date().toISOString().split('T')[0]}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
-    alert('Gagal membuat PDF. Silakan coba lagi.');
-    throw error;
+    throw new Error('Gagal membuat PDF. Silakan coba lagi.');
+  }
+}
+
+// v2.0: Monthly PDF Generator
+export function generateMonthlyPDF(
+  year: number,
+  month: number,
+  monthName: string,
+  summary: {
+    total_sessions: number;
+    total_weight: number;
+    total_items: number;
+  },
+  categories: Array<{
+    category_name: string;
+    total_weight: number;
+    percentage: number;
+  }>,
+  sessions: Array<{
+    transaction_date: string;
+    pic_name: string;
+    owner_name: string;
+    categories: string[];
+    total_weight: number;
+  }>
+) {
+  try {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    doc.setFont('helvetica');
+
+    // Header
+    doc.setFontSize(18);
+    doc.text('BARANG MASUK UPL', 105, 20, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`RINGKASAN BULANAN - ${monthName.toUpperCase()} ${year}`, 105, 28, { align: 'center' });
+
+    // Summary Box
+    doc.setFontSize(10);
+    const startY = 40;
+
+    // Draw summary box
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(245, 245, 245);
+    doc.rect(15, startY, 180, 25, 'FD');
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RINGKASAN', 20, startY + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Total Sesi: ${summary.total_sessions}`, 20, startY + 14);
+    doc.text(`Total Item: ${summary.total_items}`, 75, startY + 14);
+    doc.text(`Total Berat: ${summary.total_weight.toFixed(2)} kg`, 130, startY + 14);
+
+    // Category Breakdown Table
+    let currentY = startY + 35;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DISTRIBUSI PER KATEGORI', 15, currentY);
+
+    currentY += 5;
+
+    const categoryTableData = categories.map(cat => [
+      cat.category_name,
+      cat.total_weight.toFixed(2),
+      cat.percentage.toFixed(1) + '%'
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Kategori Plastik', 'Total Berat (kg)', 'Persentase']],
+      body: categoryTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 45, halign: 'right' },
+        2: { cellWidth: 35, halign: 'center' }
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3
+      },
+      margin: { left: 15, right: 15 }
+    });
+
+    // Sessions Table
+    currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETAIL SESI PENIMBANGAN', 15, currentY);
+
+    currentY += 5;
+
+    const sessionTableData = sessions.map(session => [
+      new Date(session.transaction_date).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }),
+      session.pic_name,
+      session.owner_name,
+      session.categories.join(', '),
+      session.total_weight.toFixed(2)
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Tanggal', 'PIC', 'Pemilik', 'Kategori', 'Total (kg)']],
+      body: sessionTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [52, 152, 219],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { cellWidth: 28, halign: 'center' },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 67 },
+        4: { cellWidth: 20, halign: 'right' }
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2
+      },
+      margin: { left: 15, right: 15 }
+    });
+
+    // Footer - Total
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, finalY, 180, 10, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('TOTAL KESELURUHAN:', 120, finalY + 7);
+    doc.text(`${summary.total_weight.toFixed(2)} kg`, 170, finalY + 7, { align: 'right' });
+
+    // Footer - Generation info
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Laporan dibuat pada: ${new Date().toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`,
+      105,
+      pageHeight - 10,
+      { align: 'center' }
+    );
+
+    // Save PDF
+    const fileName = `laporan_bulanan_${monthName.toLowerCase()}_${year}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+
+  } catch (error) {
+    console.error('Error generating monthly PDF:', error);
+    throw new Error('Gagal membuat PDF bulanan. Silakan coba lagi.');
   }
 }

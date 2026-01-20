@@ -61,8 +61,21 @@ export default function MonthlySummaryPage() {
     const handleDownloadPDF = async () => {
         if (!selectedMonth || !modalData.summary) return;
 
-        // TODO: Implement monthly PDF generation
-        alert('Monthly PDF download will be implemented');
+        try {
+            const { generateMonthlyPDF } = await import('@/lib/pdf-generator');
+
+            generateMonthlyPDF(
+                selectedMonth.year,
+                selectedMonth.month,
+                monthNames[selectedMonth.month - 1],
+                modalData.summary,
+                modalData.categories,
+                modalData.sessions
+            );
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            alert('Gagal mengunduh PDF. Silakan coba lagi.');
+        }
     };
 
     const monthNames = [
