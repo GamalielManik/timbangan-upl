@@ -163,12 +163,13 @@ export default function InputPage() {
         end_time: endTime.toISOString(),
       });
 
-      const itemsToInsert = formData.items.map((item, index) => ({
+      const itemsToInsert = formData.items.map((item: { category_id: number; weight_kg: number; satuan?: 'SAK' | 'PRESS' | 'BAL' | ''; gabungan?: string }, index) => ({
         session_id: session.id,
         category_id: item.category_id,
         sequence_number: index + 1,
         weight_kg: item.weight_kg,
         satuan: item.satuan || undefined,
+        gabungan: item.gabungan || undefined,
       }));
 
       await createWeighingItems(itemsToInsert);
