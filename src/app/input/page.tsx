@@ -14,6 +14,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { Trash2, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FormData extends SessionFormData {
+  gabungan?: string;
   showAllCategories?: boolean;
 }
 
@@ -31,6 +32,7 @@ export default function InputPage() {
     transaction_date: new Date().toISOString().split('T')[0],
     pic_name: '',
     owner_name: '',
+    gabungan: '',
     selected_categories: [],
     items: [],
     showAllCategories: false,
@@ -276,6 +278,15 @@ export default function InputPage() {
                         value={formData.owner_name}
                         onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
                         required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Input
+                        type="text"
+                        label="Gabungan"
+                        placeholder="Gabungan"
+                        value={formData.gabungan || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gabungan: e.target.value }))}
                       />
                     </div>
                   </div>

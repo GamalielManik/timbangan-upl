@@ -8,6 +8,7 @@ export interface WeighingSession {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  gabungan?: string;
   selected_category_ids: number[];
   start_time?: string;
   end_time?: string;
@@ -29,6 +30,7 @@ export interface SessionSummary {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  gabungan?: string;
   total_items: number;
   total_weight: number;
   items: WeighingItem[];
@@ -46,6 +48,7 @@ export interface SessionFormData {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  gabungan?: string;
   selected_categories: number[];
   items: Array<{
     category_id: number;

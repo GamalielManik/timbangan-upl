@@ -52,6 +52,11 @@ export function generateSessionPDF(session: SessionSummary) {
       `Pemilik: ${session.owner_name || 'Tidak diketahui'}`,
     ];
 
+    // Add gabungan if it exists
+    if (session.gabungan) {
+      sessionInfo.push(`Gabungan: ${session.gabungan}`);
+    }
+
     let yPosition = 40;
     sessionInfo.forEach(info => {
       doc.text(info, 14, yPosition);

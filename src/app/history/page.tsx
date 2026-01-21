@@ -510,6 +510,16 @@ export default function HistoryPage() {
                     {selectedSession.owner_name || 'Tidak diketahui'}
                   </p>
                 </div>
+                {selectedSession.gabungan && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gabungan
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedSession.gabungan}
+                    </p>
+                  </div>
+                )}
 
                 {/* v2.0: Time Tracking Display */}
                 {(selectedSession.start_time || selectedSession.end_time) && (
