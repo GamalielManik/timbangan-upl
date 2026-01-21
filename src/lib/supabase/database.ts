@@ -102,7 +102,13 @@ export const getSessionSummaries = async (
       const { data: items, error: itemsError } = await supabase
         .from('weighing_items')
         .select(`
-          *,
+          id,
+          session_id,
+          category_id,
+          sequence_number,
+          weight_kg,
+          satuan,
+          gabungan,
           plastic_categories (*)
         `)
         .eq('session_id', session.id);
@@ -116,9 +122,15 @@ export const getSessionSummaries = async (
       const totalWeight = items?.reduce((sum, item) => sum + (item.weight_kg || 0), 0) || 0;
 
       // Process items to ensure category data is properly attached
-      const processedItems = items?.map(item => ({
-        ...item,
-        category: item.plastic_categories
+      const processedItems: WeighingItem[] = items?.map(item => ({
+        id: item.id,
+        session_id: item.session_id,
+        category_id: item.category_id,
+        sequence_number: item.sequence_number,
+        weight_kg: item.weight_kg,
+        satuan: item.satuan,
+        gabungan: item.gabungan,
+        category: item.plastic_categories as unknown as PlasticCategory
       })) || [];
 
       sessionSummaries.push({
@@ -156,7 +168,13 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
   const { data: items, error: itemsError } = await supabase
     .from('weighing_items')
     .select(`
-      *,
+      id,
+      session_id,
+      category_id,
+      sequence_number,
+      weight_kg,
+      satuan,
+      gabungan,
       plastic_categories (*)
     `)
     .eq('session_id', sessionId)
@@ -174,8 +192,14 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
     total_items: items?.length || 0,
     total_weight: totalWeight,
     items: items?.map(item => ({
-      ...item,
-      category: item.plastic_categories
+      id: item.id,
+      session_id: item.session_id,
+      category_id: item.category_id,
+      sequence_number: item.sequence_number,
+      weight_kg: item.weight_kg,
+      satuan: item.satuan,
+      gabungan: item.gabungan,
+      category: item.plastic_categories as unknown as PlasticCategory
     })) || []
   };
 };
