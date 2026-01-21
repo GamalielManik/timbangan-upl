@@ -52,11 +52,6 @@ export function generateSessionPDF(session: SessionSummary) {
       `Pemilik: ${session.owner_name || 'Tidak diketahui'}`,
     ];
 
-    // Add gabungan if it exists
-    if (session.gabungan) {
-      sessionInfo.push(`Gabungan: ${session.gabungan}`);
-    }
-
     let yPosition = 40;
     sessionInfo.forEach(info => {
       doc.text(info, 14, yPosition);
@@ -73,12 +68,14 @@ export function generateSessionPDF(session: SessionSummary) {
     // Prepare table data with validation
     const tableData = (session.items || []).map((item, index) => {
       const satuanValue = item.satuan || '-';
-      console.log(`Item ${index + 1}: category=${item.category?.name}, satuan=${satuanValue}`);
+      const gabunganValue = item.gabungan || '-';
+      console.log(`Item ${index + 1}: category=${item.category?.name}, satuan=${satuanValue}, gabungan=${gabunganValue}`);
       return [
         index + 1,
         item.category?.name || 'Tidak diketahui',
         (item.weight_kg || 0).toFixed(2),
-        satuanValue
+        satuanValue,
+        gabunganValue
       ];
     });
 
@@ -87,12 +84,13 @@ export function generateSessionPDF(session: SessionSummary) {
       'Total',
       '',
       (session.total_weight || 0).toFixed(2),
+      '',
       ''
     ]);
 
     // Table with explicit configuration
     autoTable(doc, {
-      head: [['No', 'Jenis Plastik', 'Berat (kg)', 'Satuan']],
+      head: [['No', 'Jenis Plastik', 'Berat (kg)', 'Satuan', 'Gabungan']],
       body: tableData,
       startY: yPosition + 10,
       theme: 'grid',

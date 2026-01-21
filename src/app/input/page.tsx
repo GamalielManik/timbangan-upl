@@ -14,7 +14,6 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { Trash2, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FormData extends SessionFormData {
-  gabungan?: string;
   showAllCategories?: boolean;
 }
 
@@ -32,7 +31,6 @@ export default function InputPage() {
     transaction_date: new Date().toISOString().split('T')[0],
     pic_name: '',
     owner_name: '',
-    gabungan: '',
     selected_categories: [],
     items: [],
     showAllCategories: false,
@@ -49,7 +47,7 @@ export default function InputPage() {
     if (step === 2 && formData.items.length === 0) {
       setFormData(prev => ({
         ...prev,
-        items: [{ category_id: 0, weight_kg: 0, satuan: '' }]
+        items: [{ category_id: 0, weight_kg: 0, satuan: '', gabungan: '' }]
       }));
     }
   }, [step, formData.items.length, setFormData]);
@@ -83,7 +81,7 @@ export default function InputPage() {
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { category_id: 0, weight_kg: 0, satuan: '' }]
+      items: [...prev.items, { category_id: 0, weight_kg: 0, satuan: '', gabungan: '' }]
     }));
   };
 
@@ -94,7 +92,7 @@ export default function InputPage() {
     }));
   };
 
-  const updateItem = (index: number, field: 'category_id' | 'weight_kg' | 'satuan', value: number | string) => {
+  const updateItem = (index: number, field: 'category_id' | 'weight_kg' | 'satuan' | 'gabungan', value: number | string) => {
     // v2.0: Track start time on first weight input
     if (field === 'weight_kg' && value && Number(value) > 0 && !startTime) {
       setStartTime(new Date());
@@ -280,15 +278,6 @@ export default function InputPage() {
                         required
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <Input
-                        type="text"
-                        label="Gabungan"
-                        placeholder="Gabungan"
-                        value={formData.gabungan || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, gabungan: e.target.value }))}
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -337,7 +326,7 @@ export default function InputPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {formData.items.map((item, index) => (
+                  {formData.items.map((item: { category_id: number; weight_kg: number; satuan?: 'SAK' | 'PRESS' | 'BAL' | ''; gabungan?: string }, index) => (
                     <div key={index} className="flex gap-3 items-end p-4 border border-gray-200 rounded-lg">
                       <div className="flex-1">
                         <Select
@@ -375,6 +364,15 @@ export default function InputPage() {
                             { value: 'PRESS', label: 'PRESS' },
                             { value: 'BAL', label: 'BAL' }
                           ]}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="text"
+                          label="Gabungan"
+                          placeholder="Gabungan"
+                          value={item.gabungan || ''}
+                          onChange={(e) => updateItem(index, 'gabungan', e.target.value)}
                         />
                       </div>
                       <Button

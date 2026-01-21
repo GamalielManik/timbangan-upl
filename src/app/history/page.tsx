@@ -510,16 +510,6 @@ export default function HistoryPage() {
                     {selectedSession.owner_name || 'Tidak diketahui'}
                   </p>
                 </div>
-                {selectedSession.gabungan && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gabungan
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {selectedSession.gabungan}
-                    </p>
-                  </div>
-                )}
 
                 {/* v2.0: Time Tracking Display */}
                 {(selectedSession.start_time || selectedSession.end_time) && (
@@ -592,6 +582,9 @@ export default function HistoryPage() {
                         <th className="border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-900">
                           Satuan
                         </th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium text-gray-900">
+                          Gabungan
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -610,11 +603,14 @@ export default function HistoryPage() {
                             <td className="border border-gray-200 px-4 py-2 text-sm text-gray-900 text-center">
                               {item.satuan || '-'}
                             </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-900">
+                              {item.gabungan || '-'}
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="border border-gray-200 px-4 py-2 text-center text-sm text-gray-500">
+                          <td colSpan={5} className="border border-gray-200 px-4 py-2 text-center text-sm text-gray-500">
                             Tidak ada data
                           </td>
                         </tr>
@@ -624,6 +620,9 @@ export default function HistoryPage() {
                       <tr className="bg-gray-100">
                         <td colSpan={3} className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-900">
                           Total
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-gray-900 text-center">
+                          -
                         </td>
                         <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-gray-900 text-center">
                           -
