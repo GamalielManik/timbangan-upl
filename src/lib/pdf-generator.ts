@@ -88,7 +88,7 @@ export function generateSessionPDF(session: SessionSummary) {
       ''
     ]);
 
-    // Table with explicit configuration
+    // Table with optimized configuration for better readability
     autoTable(doc, {
       head: [['No', 'Jenis Plastik', 'Berat (kg)', 'Satuan', 'Gabungan']],
       body: tableData,
@@ -96,29 +96,43 @@ export function generateSessionPDF(session: SessionSummary) {
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 10,
-        cellPadding: 2,
+        fontSize: 9,
+        cellPadding: 3,
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
+        halign: 'left',
+        valign: 'middle',
       },
       headStyles: {
-        fillColor: [0, 156, 228],
-        textColor: 255,
+        fillColor: [41, 128, 185], // Professional blue
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 10,
+        halign: 'center',
+        valign: 'middle',
+        minCellHeight: 8, // Reduced header height from default
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 }, // No - centered, narrow
+        1: { halign: 'left', cellWidth: 80 }, // Jenis Plastik - wider for text
+        2: { halign: 'right', cellWidth: 30 }, // Berat - right aligned for numbers
+        3: { halign: 'center', cellWidth: 25 }, // Satuan - centered
+        4: { halign: 'left', cellWidth: 60 }, // Gabungan - enough space for text
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245]
+        fillColor: [245, 245, 245], // Light gray for alternate rows
       },
-      foot: [],
-      tableWidth: 240, // Reduced width to fit landscape page
-      columnStyles: {
-        0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // No
-        1: { cellWidth: 90 }, // Jenis Plastik
-        2: { cellWidth: 60, halign: 'right' }, // Berat
-        3: { cellWidth: 70, halign: 'center', fillColor: [255, 255, 200] }, // Satuan - highlighted
+      bodyStyles: {
+        minCellHeight: 8,
       },
-      margin: { left: 10, right: 10 },
+      margin: { top: 10, right: 14, bottom: 10, left: 14 },
+      didParseCell: function (data) {
+        // Make total row stand out
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [230, 230, 230];
+        }
+      },
       didDrawPage: (data) => {
         // Add footer on each page
         doc.setFontSize(9);
@@ -128,11 +142,6 @@ export function generateSessionPDF(session: SessionSummary) {
           doc.internal.pageSize.height - 10,
           { align: 'center' }
         );
-
-        // Debug: Table information
-        console.log('Table rendered successfully');
-        console.log('Number of rows:', tableData.length);
-        console.log('Table width used: 240mm');
       },
     });
 
