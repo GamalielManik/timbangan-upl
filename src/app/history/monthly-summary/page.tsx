@@ -6,15 +6,16 @@ import { Card, CardContent, CardHeader } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Modal } from '@/app/components/ui/modal';
 import { PieChart } from '@/app/components/charts/pie-chart';
-import { getAvailableMonths, getMonthlyDashboard, getMonthlyCategoryBreakdown, getMonthlySessions } from '@/lib/supabase/database';
+import { getAvailableMonths, getMonthlyDashboard, getMonthlyCategoryBreakdown, getMonthlySessions, createClosingPeriod } from '@/lib/supabase/database';
 import { MonthlyDashboard, MonthlyCategoryBreakdown, MonthlySessionDetail, AvailableMonth } from '@/types/monthly';
-import { Download, TrendingUp, Package, Eye, ArrowLeft } from 'lucide-react';
+import { Download, TrendingUp, Package, Eye, ArrowLeft, Calendar, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MonthlySummaryPage() {
     const [availableMonths, setAvailableMonths] = useState<AvailableMonth[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
-    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedPeriod, setSelectedPeriod] = useState<AvailableMonth | null>(null);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
     const [modalData, setModalData] = useState<{
         summary: MonthlyDashboard | null;
         categories: MonthlyCategoryBreakdown[];
@@ -22,6 +23,12 @@ export default function MonthlySummaryPage() {
     }>({ summary: null, categories: [], sessions: [] });
     const [loading, setLoading] = useState(true);
     const [modalLoading, setModalLoading] = useState(false);
+
+    // Create period modal state
+    const [newPeriodName, setNewPeriodName] = useState('');
+    const [newStartDate, setNewStartDate] = useState('');
+    const [newEndDate, setNewEndDate] = useState('');
+    const [createLoading, setCreateLoading] = useState(false);
 
     useEffect(() => {
         fetchAvailableMonths();
@@ -38,36 +45,61 @@ export default function MonthlySummaryPage() {
         }
     };
 
-    const handleViewMonth = async (year: number, month: number) => {
-        setSelectedMonth({ year, month });
-        setModalOpen(true);
+    const handleViewPeriod = async (period: AvailableMonth) => {
+        setSelectedPeriod(period);
+        setViewModalOpen(true);
         setModalLoading(true);
 
         try {
             const [summary, categories, sessions] = await Promise.all([
-                getMonthlyDashboard(year, month),
-                getMonthlyCategoryBreakdown(year, month),
-                getMonthlySessions(year, month)
+                getMonthlyDashboard(period.period_id),
+                getMonthlyCategoryBreakdown(period.period_id),
+                getMonthlySessions(period.period_id)
             ]);
 
             setModalData({ summary, categories, sessions });
         } catch (error) {
-            console.error('Error fetching monthly data:', error);
+            console.error('Error fetching period data:', error);
         } finally {
             setModalLoading(false);
         }
     };
 
+    const handleCreatePeriod = async () => {
+        if (!newPeriodName.trim() || !newStartDate || !newEndDate) {
+            alert('Mohon lengkapi semua field');
+            return;
+        }
+
+        setCreateLoading(true);
+        try {
+            await createClosingPeriod(newPeriodName, newStartDate, newEndDate);
+            // Refresh available months
+            await fetchAvailableMonths();
+            // Reset form
+            setNewPeriodName('');
+            setNewStartDate('');
+            setNewEndDate('');
+            setCreateModalOpen(false);
+        } catch (error) {
+            console.error('Error creating period:', error);
+            alert('Gagal membuat periode. Silakan coba lagi.');
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     const handleDownloadPDF = async () => {
-        if (!selectedMonth || !modalData.summary) return;
+        if (!selectedPeriod || !modalData.summary) return;
 
         try {
             const { generateMonthlyPDF } = await import('@/lib/pdf-generator');
 
+            // Will need to update pdf-generator.ts later, for now pass placeholder values
             generateMonthlyPDF(
-                selectedMonth.year,
-                selectedMonth.month,
-                monthNames[selectedMonth.month - 1],
+                0, // year placeholder
+                0, // month placeholder  
+                modalData.summary.period_name,
                 modalData.summary,
                 modalData.categories,
                 modalData.sessions
@@ -78,19 +110,7 @@ export default function MonthlySummaryPage() {
         }
     };
 
-    const monthNames = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
 
-    // Group months by year
-    const monthsByYear = availableMonths.reduce((acc, month) => {
-        if (!acc[month.year]) {
-            acc[month.year] = [];
-        }
-        acc[month.year].push(month);
-        return acc;
-    }, {} as Record<number, AvailableMonth[]>);
 
     if (loading) {
         return (
@@ -142,46 +162,112 @@ export default function MonthlySummaryPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="space-y-8">
-                        {Object.entries(monthsByYear)
-                            .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
-                            .map(([year, months]) => (
-                                <div key={year}>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-4">{year}</h2>
+                    <>
+                        {/* Add Period Button */}
+                        <div className="mb-6">
+                            <Button
+                                onClick={() => setCreateModalOpen(true)}
+                                className="bg-primary text-white"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Tambah Periode Baru
+                            </Button>
+                        </div>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {months
-                                            .sort((a, b) => b.month - a.month)
-                                            .map(month => (
-                                                <Card
-                                                    key={`${month.year}-${month.month}`}
-                                                    className="bg-white hover:shadow-lg transition-shadow cursor-pointer"
-                                                    onClick={() => handleViewMonth(month.year, month.month)}
-                                                >
-                                                    <CardContent className="p-6">
-                                                        <div className="text-center">
-                                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                                                {monthNames[month.month - 1]}
-                                                            </h3>
-                                                            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                                                                <Package className="h-4 w-4" />
-                                                                <span>{month.session_count} sesi</span>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                    </div>
-                                </div>
+                        {/* Period Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {availableMonths.map(period => (
+                                <Card
+                                    key={period.period_id}
+                                    className="bg-white hover:shadow-lg transition-shadow cursor-pointer"
+                                    onClick={() => handleViewPeriod(period)}
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="text-center">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                                {period.period_name}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 mb-2">
+                                                {new Date(period.start_date).toLocaleDateString('id-ID')} - {new Date(period.end_date).toLocaleDateString('id-ID')}
+                                            </p>
+                                            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                                                <Package className="h-4 w-4" />
+                                                <span>{period.session_count} sesi</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             ))}
-                    </div>
+                        </div>
+                    </>
                 )}
 
-                {/* Monthly Detail Modal */}
+                {/* Create Period Modal */}
                 <Modal
-                    isOpen={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                    title={selectedMonth ? `Ringkasan ${monthNames[selectedMonth.month - 1]} ${selectedMonth.year}` : ''}
+                    isOpen={createModalOpen}
+                    onClose={() => setCreateModalOpen(false)}
+                    title="Buat Periode Tutup Buku Baru"
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Nama Periode *
+                            </label>
+                            <input
+                                type="text"
+                                value={newPeriodName}
+                                onChange={(e) => setNewPeriodName(e.target.value)}
+                                placeholder="contoh: Desember 2025"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Tanggal Mulai *
+                            </label>
+                            <input
+                                type="date"
+                                value={newStartDate}
+                                onChange={(e) => setNewStartDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Tanggal Akhir *
+                            </label>
+                            <input
+                                type="date"
+                                value={newEndDate}
+                                onChange={(e) => setNewEndDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                onClick={() => setCreateModalOpen(false)}
+                                variant="outline"
+                                className="flex-1"
+                                disabled={createLoading}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                onClick={handleCreatePeriod}
+                                className="flex-1 bg-primary text-white"
+                                disabled={createLoading}
+                            >
+                                {createLoading ? 'Menyimpan...' : 'Simpan'}
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Period Detail Modal */}
+                <Modal
+                    isOpen={viewModalOpen}
+                    onClose={() => setViewModalOpen(false)}
+                    title={selectedPeriod ? `Ringkasan ${selectedPeriod.period_name}` : ''}
                 >
                     {modalLoading ? (
                         <div className="py-12 text-center">
@@ -273,7 +359,7 @@ export default function MonthlySummaryPage() {
 
                             {/* Actions */}
                             <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-                                <Button variant="outline" onClick={() => setModalOpen(false)}>
+                                <Button variant="outline" onClick={() => setViewModalOpen(false)}>
                                     Tutup
                                 </Button>
                                 <Button onClick={handleDownloadPDF} className="bg-secondary hover:bg-secondary/90">

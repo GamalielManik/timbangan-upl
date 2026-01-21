@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import { PlasticCategory, WeighingSession, WeighingItem, SessionSummary, WeeklyDashboard } from '@/types';
-import { MonthlyDashboard, MonthlyCategoryBreakdown, MonthlySessionDetail, AvailableMonth } from '@/types/monthly';
+import { MonthlyDashboard, MonthlyCategoryBreakdown, MonthlySessionDetail, AvailableMonth, ClosingPeriod } from '@/types/monthly';
 
 export const getPlasticCategories = async (): Promise<PlasticCategory[]> => {
   const { data, error } = await supabase
@@ -454,58 +454,171 @@ export const addPlasticCategories = async (categoryNames: string[]): Promise<Pla
 };
 
 // ============================================================================
+// CLOSING PERIODS FUNCTIONS (v2.5 - Dynamic Periods)
+// ============================================================================
+
+/**
+ * Get all closing periods or filter by active status
+ */
+export const getClosingPeriods = async (activeOnly = false): Promise<ClosingPeriod[]> => {
+  try {
+    let query = supabase
+      .from('closing_periods')
+      .select('*')
+      .order('start_date', { ascending: false });
+
+    if (activeOnly) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching closing periods:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getClosingPeriods:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a new closing period
+ */
+export const createClosingPeriod = async (
+  periodName: string,
+  startDate: string,
+  endDate: string
+): Promise<ClosingPeriod | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('closing_periods')
+      .insert({
+        period_name: periodName.trim(),
+        start_date: startDate,
+        end_date: endDate,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating closing period:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createClosingPeriod:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing closing period
+ */
+export const updateClosingPeriod = async (
+  periodId: number,
+  updates: {
+    period_name?: string;
+    start_date?: string;
+    end_date?: string;
+    is_active?: boolean;
+  }
+): Promise<ClosingPeriod | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('closing_periods')
+      .update(updates)
+      .eq('id', periodId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating closing period:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateClosingPeriod:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete (soft delete) a closing period
+ */
+export const deleteClosingPeriod = async (periodId: number): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('closing_periods')
+      .update({ is_active: false })
+      .eq('id', periodId);
+
+    if (error) {
+      console.error('Error deleting closing period:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteClosingPeriod:', error);
+    return false;
+  }
+};
+
+// ============================================================================
 // MONTHLY SUMMARY FUNCTIONS (v2.0)
 // ============================================================================
 
 /**
- * Get available months that have weighing data
+ * Get available closing periods with session counts
  */
 export const getAvailableMonths = async (): Promise<AvailableMonth[]> => {
   try {
-    const { data: sessions, error } = await supabase
-      .from('weighing_sessions')
-      .select('transaction_date')
-      .order('transaction_date', { ascending: false });
+    // Get all active closing periods
+    const { data: periods, error: periodsError } = await supabase
+      .from('closing_periods')
+      .select('*')
+      .eq('is_active', true)
+      .order('start_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching available months:', error);
+    if (periodsError) {
+      console.error('Error fetching closing periods:', periodsError);
       return [];
     }
 
-    if (!sessions || sessions.length === 0) {
+    if (!periods || periods.length === 0) {
       return [];
     }
 
-    // Group by year and month
-    const monthMap = new Map<string, { year: number; month: number; count: number }>();
+    // For each period, count sessions within the date range
+    const availableMonths: AvailableMonth[] = await Promise.all(
+      periods.map(async (period) => {
+        const { data: sessions, error } = await supabase
+          .from('weighing_sessions')
+          .select('id')
+          .gte('transaction_date', period.start_date)
+          .lte('transaction_date', period.end_date);
 
-    sessions.forEach(session => {
-      if (!session.transaction_date) return;
+        const sessionCount = sessions?.length || 0;
 
-      const date = new Date(session.transaction_date);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1; // 1-12
-      const key = `${year}-${month}`;
+        return {
+          period_id: period.id,
+          period_name: period.period_name,
+          start_date: period.start_date,
+          end_date: period.end_date,
+          session_count: sessionCount,
+          is_active: period.is_active
+        };
+      })
+    );
 
-      if (monthMap.has(key)) {
-        const existing = monthMap.get(key)!;
-        monthMap.set(key, { ...existing, count: existing.count + 1 });
-      } else {
-        monthMap.set(key, { year, month, count: 1 });
-      }
-    });
-
-    const monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-
-    return Array.from(monthMap.values()).map(({ year, month, count }) => ({
-      year,
-      month,
-      session_count: count,
-      formatted: `${monthNames[month - 1]} ${year}`
-    }));
+    return availableMonths;
   } catch (error) {
     console.error('Error in getAvailableMonths:', error);
     return [];
@@ -513,26 +626,31 @@ export const getAvailableMonths = async (): Promise<AvailableMonth[]> => {
 };
 
 /**
- * Get monthly dashboard summary for a specific month
+ * Get monthly dashboard summary for a specific closing period
  */
-export const getMonthlyDashboard = async (year: number, month: number): Promise<MonthlyDashboard | null> => {
+export const getMonthlyDashboard = async (periodId: number): Promise<MonthlyDashboard | null> => {
   try {
-    // Calculate start and end of month
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Last day of month
+    // Get the closing period details
+    const { data: period, error: periodError } = await supabase
+      .from('closing_periods')
+      .select('*')
+      .eq('id', periodId)
+      .single();
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
+    if (periodError || !period) {
+      console.error('Error fetching closing period:', periodError);
+      return null;
+    }
 
-    // Get all sessions in this month
+    // Get all sessions in this period
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
       .select('id, transaction_date')
-      .gte('transaction_date', startDateStr)
-      .lte('transaction_date', endDateStr);
+      .gte('transaction_date', period.start_date)
+      .lte('transaction_date', period.end_date);
 
     if (sessionsError) {
-      console.error('Error fetching monthly sessions:', sessionsError);
+      console.error('Error fetching period sessions:', sessionsError);
       return null;
     }
 
@@ -548,22 +666,18 @@ export const getMonthlyDashboard = async (year: number, month: number): Promise<
       .in('session_id', sessionIds);
 
     if (itemsError) {
-      console.error('Error fetching monthly items:', itemsError);
+      console.error('Error fetching period items:', itemsError);
       return null;
     }
 
     const totalWeight = items?.reduce((sum, item) => sum + (item.weight_kg || 0), 0) || 0;
     const totalItems = items?.length || 0;
 
-    const monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-
     return {
-      year,
-      month,
-      month_name: monthNames[month - 1],
+      period_id: period.id,
+      period_name: period.period_name,
+      start_date: period.start_date,
+      end_date: period.end_date,
       total_sessions: sessions.length,
       total_weight: totalWeight,
       total_items: totalItems
@@ -575,25 +689,29 @@ export const getMonthlyDashboard = async (year: number, month: number): Promise<
 };
 
 /**
- * Get category breakdown for a specific month (for pie chart)
+ * Get category breakdown for a specific closing period (for pie chart)
  */
 export const getMonthlyCategoryBreakdown = async (
-  year: number,
-  month: number
+  periodId: number
 ): Promise<MonthlyCategoryBreakdown[]> => {
   try {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // Get the closing period details
+    const { data: period, error: periodError } = await supabase
+      .from('closing_periods')
+      .select('*')
+      .eq('id', periodId)
+      .single();
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
+    if (periodError || !period) {
+      return [];
+    }
 
-    // Get all sessions in this month
+    // Get all sessions in this period
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
       .select('id')
-      .gte('transaction_date', startDateStr)
-      .lte('transaction_date', endDateStr);
+      .gte('transaction_date', period.start_date)
+      .lte('transaction_date', period.end_date);
 
     if (sessionsError || !sessions || sessions.length === 0) {
       return [];
@@ -644,24 +762,33 @@ export const getMonthlyCategoryBreakdown = async (
 };
 
 /**
- * Get detailed session list for a specific month
+ * Get detailed session list for a specific closing period
  */
 export const getMonthlySessions = async (
-  year: number,
-  month: number
+  periodId: number
 ): Promise<MonthlySessionDetail[]> => {
   try {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // Get the closing period details
+    const { data: period, error: periodError } = await supabase
+      .from('closing_periods')
+      .select('*')
+      .eq('id', periodId)
+      .single();
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
+    if (periodError || !period) {
+      return [];
+    }
 
     const { data: sessions, error: sessionsError } = await supabase
       .from('weighing_sessions')
-      .select('*')
-      .gte('transaction_date', startDateStr)
-      .lte('transaction_date', endDateStr)
+      .select(`
+        id,
+        transaction_date,
+        pic_name,
+        owner_name
+      `)
+      .gte('transaction_date', period.start_date)
+      .lte('transaction_date', period.end_date)
       .order('transaction_date', { ascending: false });
 
     if (sessionsError || !sessions) {
