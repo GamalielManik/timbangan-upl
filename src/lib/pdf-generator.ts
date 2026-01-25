@@ -27,9 +27,9 @@ export function generateSessionPDF(session: SessionSummary) {
     }
 
     const doc = new jsPDF({
-      orientation: 'landscape',
+      orientation: 'portrait',
       unit: 'mm',
-      format: 'a4'
+      format: 'a4',
     });
 
     // Set font to built-in font for better compatibility
@@ -113,11 +113,11 @@ export function generateSessionPDF(session: SessionSummary) {
         minCellHeight: 8, // Reduced header height from default
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 15 }, // No - centered, narrow
-        1: { halign: 'left', cellWidth: 80 }, // Jenis Plastik - wider for text
-        2: { halign: 'right', cellWidth: 30 }, // Berat - right aligned for numbers
-        3: { halign: 'center', cellWidth: 25 }, // Satuan - centered
-        4: { halign: 'left', cellWidth: 60 }, // Gabungan - enough space for text
+        0: { halign: 'center', cellWidth: 12 }, // No - narrow
+        1: { halign: 'left', cellWidth: 'auto' }, // Jenis Plastik - auto adjust
+        2: { halign: 'right', cellWidth: 25 }, // Berat - compact
+        3: { halign: 'center', cellWidth: 20 }, // Satuan - compact
+        4: { halign: 'left', cellWidth: 45 }, // Gabungan - compact
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245], // Light gray for alternate rows
@@ -125,7 +125,7 @@ export function generateSessionPDF(session: SessionSummary) {
       bodyStyles: {
         minCellHeight: 8,
       },
-      margin: { top: 10, right: 14, bottom: 10, left: 14 },
+      margin: { top: 5, right: 8, bottom: 5, left: 8 }, // Minimal margins for paper saving
       didParseCell: function (data) {
         // Make total row stand out
         if (data.row.index === tableData.length - 1) {
