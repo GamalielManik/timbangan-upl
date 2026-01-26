@@ -5,7 +5,7 @@ import { MonthlyDashboard, MonthlyCategoryBreakdown, MonthlySessionDetail, Avail
 export const getPlasticCategories = async (): Promise<PlasticCategory[]> => {
   const { data, error } = await supabase
     .from('plastic_categories')
-    .select('*')
+    .select('id, name')
     .order('name');
 
   if (error) {
@@ -58,11 +58,27 @@ export const getSessionSummaries = async (
   }
 ): Promise<SessionSummary[]> => {
   try {
-    // Fetch sessions and their items separately to calculate totals correctly
-    const { data: sessions, error: sessionsError } = await supabase
+    // Fetch sessions with database-side filtering for better performance
+    let query = supabase
       .from('weighing_sessions')
-      .select('*')
+      .select('id, transaction_date, pic_name, owner_name, start_time, end_time')
       .order('transaction_date', { ascending: false });
+
+    // Apply filters at database level
+    if (filters?.startDate) {
+      query = query.gte('transaction_date', filters.startDate);
+    }
+    if (filters?.endDate) {
+      query = query.lte('transaction_date', filters.endDate);
+    }
+    if (filters?.picName) {
+      query = query.ilike('pic_name', `%${filters.picName}%`);
+    }
+    if (filters?.ownerName) {
+      query = query.ilike('owner_name', `%${filters.ownerName}%`);
+    }
+
+    const { data: sessions, error: sessionsError } = await query;
 
     if (sessionsError) {
       console.error('Error fetching sessions:', sessionsError);
@@ -73,27 +89,8 @@ export const getSessionSummaries = async (
       return [];
     }
 
-    // Apply filters
-    let filteredSessions = sessions;
-    if (filters?.startDate) {
-      filteredSessions = filteredSessions.filter(s => s.transaction_date >= filters.startDate!);
-    }
-    if (filters?.endDate) {
-      filteredSessions = filteredSessions.filter(s => s.transaction_date <= filters.endDate!);
-    }
-    if (filters?.picName) {
-      filteredSessions = filteredSessions.filter(s =>
-        s.pic_name?.toLowerCase().includes(filters.picName!.toLowerCase())
-      );
-    }
-    if (filters?.ownerName) {
-      filteredSessions = filteredSessions.filter(s =>
-        s.owner_name?.toLowerCase().includes(filters.ownerName!.toLowerCase())
-      );
-    }
-
     // Filter out sessions with invalid IDs
-    filteredSessions = filteredSessions.filter(session => session.id && session.id.trim() !== '');
+    const filteredSessions = sessions.filter(session => session.id && session.id.trim() !== '');
 
     // Get items for each session to calculate totals
     const sessionSummaries: SessionSummary[] = [];
@@ -156,7 +153,7 @@ export const getSessionSummaries = async (
 export const getSessionWithItems = async (sessionId: string): Promise<SessionSummary | null> => {
   const { data: session, error: sessionError } = await supabase
     .from('weighing_sessions')
-    .select('*')
+    .select('id, transaction_date, pic_name, owner_name, start_time, end_time')
     .eq('id', sessionId)
     .single();
 
@@ -484,14 +481,14 @@ export const addPlasticCategories = async (categoryNames: string[]): Promise<Pla
 /**
  * Get all closing periods or filter by active status
  */
-export const getClosingPeriods = async (activeOnly = false): Promise<ClosingPeriod[]> => {
+export const getClosingPeriods = async (includeInactive: boolean = false): Promise<ClosingPeriod[]> => {
   try {
     let query = supabase
       .from('closing_periods')
-      .select('*')
+      .select('id, period_name, start_date, end_date, is_active, created_at')
       .order('start_date', { ascending: false });
 
-    if (activeOnly) {
+    if (!includeInactive) {
       query = query.eq('is_active', true);
     }
 
@@ -607,7 +604,7 @@ export const getAvailableMonths = async (): Promise<AvailableMonth[]> => {
     // Get all active closing periods
     const { data: periods, error: periodsError } = await supabase
       .from('closing_periods')
-      .select('*')
+      .select('id, period_name, start_date, end_date, is_active')
       .eq('is_active', true)
       .order('start_date', { ascending: false });
 
@@ -657,7 +654,7 @@ export const getMonthlyDashboard = async (periodId: number): Promise<MonthlyDash
     // Get the closing period details
     const { data: period, error: periodError } = await supabase
       .from('closing_periods')
-      .select('*')
+      .select('id, period_name, start_date, end_date')
       .eq('id', periodId)
       .single();
 
