@@ -51,8 +51,8 @@ export default function HistoryPage() {
 
   const fetchSessions = async () => {
     try {
-      const result = await getSessionSummaries();
-      setSessions(result.sessions);
+      const data = await getSessionSummaries();
+      setSessions(data);
     } catch (error) {
       console.error('Error fetching sessions:', error);
     } finally {
