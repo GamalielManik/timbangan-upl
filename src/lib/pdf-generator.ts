@@ -110,20 +110,21 @@ export function generateSessionPDF(session: SessionSummary) {
         fontSize: 10,
         halign: 'center',
         valign: 'middle',
-        minCellHeight: 8, // Reduced header height from default
+        minCellHeight: 7, // Compact header height
+        cellPadding: 2.5, // Tight padding
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 12 }, // No - narrow
-        1: { halign: 'left', cellWidth: 'auto' }, // Jenis Plastik - auto adjust
-        2: { halign: 'right', cellWidth: 25 }, // Berat - compact
-        3: { halign: 'center', cellWidth: 20 }, // Satuan - compact
-        4: { halign: 'left', cellWidth: 45 }, // Gabungan - compact
+        0: { halign: 'center', cellWidth: 10 }, // No - very narrow
+        1: { halign: 'left', cellWidth: 55 }, // Jenis Plastik - fixed width
+        2: { halign: 'right', cellWidth: 22 }, // Berat - compact
+        3: { halign: 'center', cellWidth: 18 }, // Satuan - compact  
+        4: { halign: 'left', cellWidth: 60 }, // Gabungan - wider to prevent cutoff
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245], // Light gray for alternate rows
       },
       bodyStyles: {
-        minCellHeight: 8,
+        minCellHeight: 7, // Compact rows
       },
       margin: { top: 5, right: 8, bottom: 5, left: 8 }, // Minimal margins for paper saving
       didParseCell: function (data) {
