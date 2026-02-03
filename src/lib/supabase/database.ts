@@ -251,14 +251,71 @@ export const deleteWeighingItem = async (itemId: string): Promise<void> => {
   }
 };
 
-export const deleteWeighingSession = async (sessionId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('weighing_sessions')
-    .delete()
-    .eq('id', sessionId);
+export const deleteWeighingSession = async (
+  sessionId: string,
+  userAgent?: string
+): Promise<void> => {
+  try {
+    // Step 1: Fetch session data BEFORE deletion
+    const { data: session, error: sessionError } = await supabase
+      .from('weighing_sessions')
+      .select('nama_penimbang, pemilik_barang')
+      .eq('id', sessionId)
+      .single();
 
-  if (error) {
-    console.error('Error deleting session:', error);
+    if (sessionError) {
+      console.error('Error fetching session for logging:', sessionError);
+      throw sessionError;
+    }
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Step 2: Calculate total weight from items
+    const { data: items, error: itemsError } = await supabase
+      .from('weighing_items')
+      .select('weight_kg')
+      .eq('session_id', sessionId);
+
+    if (itemsError) {
+      console.error('Error fetching items for total weight:', itemsError);
+      throw itemsError;
+    }
+
+    const totalBerat = items?.reduce((sum, item) => sum + item.weight_kg, 0) || 0;
+
+    // Step 3: Insert deletion log BEFORE deleting
+    const { error: logError } = await supabase
+      .from('logs_aktivitas')
+      .insert({
+        deleted_session_id: sessionId,
+        nama_penimbang: session.nama_penimbang,
+        pemilik_barang: session.pemilik_barang,
+        total_berat_kg: totalBerat,
+        user_agent: userAgent || null,
+      });
+
+    if (logError) {
+      console.error('Error inserting deletion log:', logError);
+      // Continue with deletion even if logging fails (non-critical)
+      console.warn('Proceeding with deletion despite logging error');
+    }
+
+    // Step 4: Delete session (cascade will delete items automatically due to FK constraint)
+    const { error: deleteError } = await supabase
+      .from('weighing_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if (deleteError) {
+      console.error('Error deleting session:', deleteError);
+      throw deleteError;
+    }
+
+    console.log(`[Deletion Log] Session ${sessionId} deleted and logged successfully`);
+  } catch (error) {
+    console.error('Error in deleteWeighingSession:', error);
     throw error;
   }
 };

@@ -115,7 +115,10 @@ export default function HistoryPage() {
     if (!sessionToDelete) return;
 
     try {
-      await deleteWeighingSession(sessionToDelete);
+      // Capture user agent for deletion logging
+      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+      await deleteWeighingSession(sessionToDelete, userAgent);
       fetchSessions();
       setDeleteModalOpen(false);
       setSessionToDelete(null);

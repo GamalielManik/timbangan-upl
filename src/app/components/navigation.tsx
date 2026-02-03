@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from './utils';
-import { Home, PlusCircle, Clock, Scale } from 'lucide-react';
+import { Home, PlusCircle, Clock, Scale, FileText } from 'lucide-react';
 
 const navigation = [
   { name: 'Beranda', href: '/', icon: Home },
   { name: 'Input Data', href: '/input', icon: PlusCircle },
   { name: 'Riwayat', href: '/history', icon: Clock },
+  { name: 'Log Aktivitas', href: '/log-aktivitas', icon: FileText },
 ];
 
 export function Navigation() {
