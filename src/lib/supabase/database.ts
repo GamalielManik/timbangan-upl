@@ -259,7 +259,7 @@ export const deleteWeighingSession = async (
     // Step 1: Fetch session data BEFORE deletion
     const { data: session, error: sessionError } = await supabase
       .from('weighing_sessions')
-      .select('nama_penimbang, pemilik_barang')
+      .select('pic_name, owner_name')
       .eq('id', sessionId)
       .single();
 
@@ -290,8 +290,8 @@ export const deleteWeighingSession = async (
       .from('logs_aktivitas')
       .insert({
         deleted_session_id: sessionId,
-        nama_penimbang: session.nama_penimbang,
-        pemilik_barang: session.pemilik_barang,
+        nama_penimbang: session.pic_name,
+        pemilik_barang: session.owner_name,
         total_berat_kg: totalBerat,
         user_agent: userAgent || null,
       });
