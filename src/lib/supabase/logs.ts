@@ -16,16 +16,25 @@ export interface DeletionLog {
  * All authenticated users can read logs per RLS policy
  */
 export const getActivityLogs = async (): Promise<DeletionLog[]> => {
+    console.log('[getActivityLogs] Starting fetch...');
+
     const { data, error } = await supabase
         .from('logs_aktivitas')
         .select('*')
         .order('deleted_at', { ascending: false });
+
+    console.log('[getActivityLogs] Query result:', {
+        data,
+        error,
+        dataLength: data?.length
+    });
 
     if (error) {
         console.error('Error fetching activity logs:', error);
         throw error;
     }
 
+    console.log('[getActivityLogs] Returning data:', data || []);
     return data || [];
 };
 

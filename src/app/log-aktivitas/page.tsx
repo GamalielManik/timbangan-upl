@@ -8,14 +8,19 @@ export default function LogAktivitasPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+
     const fetchLogs = async () => {
         try {
+            console.log('[Log Page] Starting fetch logs...');
             setLoading(true);
             setError(null);
             const data = await getActivityLogs();
+            console.log('[Log Page] Received data:', data);
+            console.log('[Log Page] Data length:', data.length);
             setLogs(data);
+            console.log('[Log Page] State updated with logs:', data.length, 'items');
         } catch (err) {
-            console.error('Error fetching logs:', err);
+            console.error('[Log Page] Error fetching logs:', err);
             setError('Gagal memuat log aktivitas');
         } finally {
             setLoading(false);
@@ -25,6 +30,7 @@ export default function LogAktivitasPage() {
     useEffect(() => {
         fetchLogs();
     }, []);
+
 
     // Format date for display
     const formatDate = (dateString: string) => {
