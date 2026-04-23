@@ -66,6 +66,7 @@ export const getSessionSummaries = async (
         transaction_date, 
         pic_name, 
         owner_name, 
+        jenis_kendaraan,
         start_time, 
         end_time,
         weighing_items (
@@ -133,6 +134,7 @@ export const getSessionSummaries = async (
           transaction_date: session.transaction_date || null,
           pic_name: session.pic_name || '',
           owner_name: session.owner_name || '',
+          jenis_kendaraan: session.jenis_kendaraan || '',
           total_items: totalItems,
           total_weight: totalWeight,
           items: processedItems,
@@ -156,6 +158,7 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
       transaction_date, 
       pic_name, 
       owner_name, 
+      jenis_kendaraan,
       start_time, 
       end_time,
       weighing_items (
@@ -188,6 +191,7 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
     transaction_date: session.transaction_date || null,
     pic_name: session.pic_name || '',
     owner_name: session.owner_name || '',
+    jenis_kendaraan: session.jenis_kendaraan || '',
     total_items: items.length,
     total_weight: totalWeight,
     items: items.map(item => ({

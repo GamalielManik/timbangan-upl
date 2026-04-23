@@ -23,6 +23,9 @@ export default function InputPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  
+  // New state for category search
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
 
   // v2.0: Time tracking state
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -31,6 +34,7 @@ export default function InputPage() {
     transaction_date: new Date().toISOString().split('T')[0],
     pic_name: '',
     owner_name: '',
+    jenis_kendaraan: '',
     selected_categories: [],
     items: [],
     showAllCategories: false,
@@ -171,6 +175,7 @@ export default function InputPage() {
         transaction_date: formData.transaction_date,
         pic_name: formData.pic_name.trim(),
         owner_name: formData.owner_name.trim(),
+        jenis_kendaraan: formData.jenis_kendaraan || undefined,
         selected_category_ids: formData.selected_categories,
         start_time: startTime?.toISOString(),
         end_time: endTime.toISOString(),
@@ -282,23 +287,46 @@ export default function InputPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, pic_name: e.target.value }))}
                       required
                     />
-                    <div className="md:col-span-2">
-                      <Input
-                        type="text"
-                        label="Nama Pemilik Barang"
-                        placeholder="Masukkan nama pemilik barang"
-                        value={formData.owner_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
-                        required
-                      />
-                    </div>
+                    <Input
+                      type="text"
+                      label="Nama Pemilik Barang"
+                      placeholder="Masukkan nama pemilik barang"
+                      value={formData.owner_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
+                      required
+                    />
+                    <Select
+                      label="Jenis Kendaraan (Opsional)"
+                      value={formData.jenis_kendaraan || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, jenis_kendaraan: e.target.value }))}
+                      options={[
+                        { value: '', label: '-- Pilih Kendaraan --' },
+                        { value: 'Tronton', label: 'Tronton' },
+                        { value: 'Fuso', label: 'Fuso' },
+                        { value: 'Truk', label: 'Truk' },
+                        { value: 'Pickup', label: 'Pickup' }
+                      ]}
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Pilih Kategori Plastik</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {categories.map((category) => (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Pilih Kategori Plastik</h3>
+                    <div className="w-full sm:w-64">
+                      <Input
+                        type="search"
+                        placeholder="Cari kategori..."
+                        value={categorySearchQuery}
+                        onChange={(e) => setCategorySearchQuery(e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2 border border-gray-100 rounded-lg bg-gray-50/50">
+                    {categories
+                      .filter(category => category.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                      .map((category) => (
                       <Checkbox
                         key={category.id}
                         id={`category-${category.id}`}
@@ -307,6 +335,11 @@ export default function InputPage() {
                         onChange={(e) => handleCategoryChange(category.id, (e.target as HTMLInputElement).checked)}
                       />
                     ))}
+                    {categories.filter(category => category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())).length === 0 && (
+                      <div className="col-span-full text-center py-4 text-gray-500 text-sm">
+                        Kategori tidak ditemukan.
+                      </div>
+                    )}
                   </div>
                 </div>
 

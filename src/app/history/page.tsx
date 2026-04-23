@@ -9,7 +9,7 @@ import { Modal } from '../components/ui/modal';
 import { SessionSummary } from '@/types';
 import { getSessionSummaries, deleteWeighingSession } from '@/lib/supabase/database';
 import { generateSessionPDF } from '@/lib/pdf-generator';
-import { Edit, Trash2, Download, Search, Calendar, User, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit, Trash2, Download, Search, Calendar, User, Eye, ChevronDown, ChevronUp, Truck } from 'lucide-react';
 import Link from 'next/link';
 
 interface GroupedSessions {
@@ -400,7 +400,15 @@ export default function HistoryPage() {
                                                                 {(session.total_weight || 0).toFixed(1)} kg ({session.total_items || 0} item)
                                                               </div>
                                                             </div>
-                                                            <p className="text-sm text-gray-600">Pemilik: {session.owner_name || 'Tidak diketahui'}</p>
+                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-gray-600">
+                                                              <p>Pemilik: {session.owner_name || 'Tidak diketahui'}</p>
+                                                              {session.jenis_kendaraan && (
+                                                                <p className="flex items-center gap-1 font-medium text-gray-700">
+                                                                  <Truck className="h-4 w-4 text-gray-400" />
+                                                                  {session.jenis_kendaraan}
+                                                                </p>
+                                                              )}
+                                                            </div>
                                                           </div>
 
                                                           <div className="flex gap-2">
