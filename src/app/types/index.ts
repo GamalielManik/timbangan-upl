@@ -8,6 +8,7 @@ export interface WeighingSession {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  jenis_kendaraan?: string;
   selected_category_ids: number[];
   created_at?: string;
 }
@@ -19,6 +20,7 @@ export interface WeighingItem {
   sequence_number: number;
   weight_kg: number;
   satuan?: 'SAK' | 'PRESS' | 'BAL' | '';
+  gabungan?: string;
   category?: PlasticCategory;
 }
 
@@ -27,6 +29,7 @@ export interface SessionSummary {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  jenis_kendaraan?: string;
   total_items: number;
   total_weight: number;
   items: WeighingItem[];
@@ -42,10 +45,12 @@ export interface SessionFormData {
   transaction_date: string;
   pic_name: string;
   owner_name: string;
+  jenis_kendaraan?: string;
   selected_categories: number[];
   items: Array<{
     category_id: number;
     weight_kg: number;
     satuan?: 'SAK' | 'PRESS' | 'BAL' | '';
+    gabungan?: string;
   }>;
 }
