@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Navigation } from '../components/navigation';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -198,7 +198,7 @@ export default function HistoryPage() {
     return grouped;
   };
 
-  const groupedSessions = groupSessionsByDate(filteredSessions);
+  const groupedSessions = useMemo(() => groupSessionsByDate(filteredSessions), [filteredSessions]);
 
   if (loading) {
     return (

@@ -58,10 +58,27 @@ export const getSessionSummaries = async (
   }
 ): Promise<SessionSummary[]> => {
   try {
-    // Fetch sessions with database-side filtering for better performance
+    // Fetch sessions AND their related items in a SINGLE query (resolves N+1 query problem)
     let query = supabase
       .from('weighing_sessions')
-      .select('id, transaction_date, pic_name, owner_name, start_time, end_time')
+      .select(`
+        id, 
+        transaction_date, 
+        pic_name, 
+        owner_name, 
+        start_time, 
+        end_time,
+        weighing_items (
+          id,
+          session_id,
+          category_id,
+          sequence_number,
+          weight_kg,
+          satuan,
+          gabungan,
+          plastic_categories (*)
+        )
+      `)
       .order('transaction_date', { ascending: false });
 
     // Apply filters at database level
@@ -89,59 +106,40 @@ export const getSessionSummaries = async (
       return [];
     }
 
-    // Filter out sessions with invalid IDs
-    const filteredSessions = sessions.filter(session => session.id && session.id.trim() !== '');
+    // Process and map the joined data into the expected SessionSummary structure
+    const sessionSummaries: SessionSummary[] = sessions
+      .filter(session => session.id && session.id.trim() !== '')
+      .map(session => {
+        // Explicitly type the items array since it comes back as any[] from the join
+        const items = (session.weighing_items as any[]) || [];
+        
+        const totalItems = items.length;
+        const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
 
-    // Get items for each session to calculate totals
-    const sessionSummaries: SessionSummary[] = [];
+        // Process items to ensure category data is properly attached
+        const processedItems: WeighingItem[] = items.map(item => ({
+          id: item.id,
+          session_id: item.session_id,
+          category_id: item.category_id,
+          sequence_number: item.sequence_number,
+          weight_kg: item.weight_kg,
+          satuan: item.satuan,
+          gabungan: item.gabungan,
+          category: item.plastic_categories as unknown as PlasticCategory
+        }));
 
-    for (const session of filteredSessions) {
-      const { data: items, error: itemsError } = await supabase
-        .from('weighing_items')
-        .select(`
-          id,
-          session_id,
-          category_id,
-          sequence_number,
-          weight_kg,
-          satuan,
-          gabungan,
-          plastic_categories (*)
-        `)
-        .eq('session_id', session.id);
-
-      if (itemsError) {
-        console.error('Error fetching items for session:', session.id, itemsError);
-        continue;
-      }
-
-      const totalItems = items?.length || 0;
-      const totalWeight = items?.reduce((sum, item) => sum + (item.weight_kg || 0), 0) || 0;
-
-      // Process items to ensure category data is properly attached
-      const processedItems: WeighingItem[] = items?.map(item => ({
-        id: item.id,
-        session_id: item.session_id,
-        category_id: item.category_id,
-        sequence_number: item.sequence_number,
-        weight_kg: item.weight_kg,
-        satuan: item.satuan,
-        gabungan: item.gabungan,
-        category: item.plastic_categories as unknown as PlasticCategory
-      })) || [];
-
-      sessionSummaries.push({
-        id: session.id,
-        transaction_date: session.transaction_date || null,
-        pic_name: session.pic_name || '',
-        owner_name: session.owner_name || '',
-        total_items: totalItems,
-        total_weight: totalWeight,
-        items: processedItems,
-        start_time: session.start_time,
-        end_time: session.end_time,
+        return {
+          id: session.id,
+          transaction_date: session.transaction_date || null,
+          pic_name: session.pic_name || '',
+          owner_name: session.owner_name || '',
+          total_items: totalItems,
+          total_weight: totalWeight,
+          items: processedItems,
+          start_time: session.start_time,
+          end_time: session.end_time,
+        };
       });
-    }
 
     return sessionSummaries;
   } catch (error) {
@@ -153,7 +151,24 @@ export const getSessionSummaries = async (
 export const getSessionWithItems = async (sessionId: string): Promise<SessionSummary | null> => {
   const { data: session, error: sessionError } = await supabase
     .from('weighing_sessions')
-    .select('id, transaction_date, pic_name, owner_name, start_time, end_time')
+    .select(`
+      id, 
+      transaction_date, 
+      pic_name, 
+      owner_name, 
+      start_time, 
+      end_time,
+      weighing_items (
+        id,
+        session_id,
+        category_id,
+        sequence_number,
+        weight_kg,
+        satuan,
+        gabungan,
+        plastic_categories (*)
+      )
+    `)
     .eq('id', sessionId)
     .single();
 
@@ -161,34 +176,21 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
     console.error('Error fetching session:', sessionError);
     return null;
   }
+  
+  if (!session) return null;
 
-  const { data: items, error: itemsError } = await supabase
-    .from('weighing_items')
-    .select(`
-      id,
-      session_id,
-      category_id,
-      sequence_number,
-      weight_kg,
-      satuan,
-      gabungan,
-      plastic_categories (*)
-    `)
-    .eq('session_id', sessionId)
-    .order('sequence_number');
-
-  if (itemsError) {
-    console.error('Error fetching items:', itemsError);
-    return null;
-  }
-
-  const totalWeight = items?.reduce((sum, item) => sum + item.weight_kg, 0) || 0;
+  // weighing_items might not be ordered, so we sort them in memory
+  const items = ((session.weighing_items as any[]) || []).sort((a, b) => a.sequence_number - b.sequence_number);
+  const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0), 0);
 
   return {
-    ...session,
-    total_items: items?.length || 0,
+    id: session.id,
+    transaction_date: session.transaction_date || null,
+    pic_name: session.pic_name || '',
+    owner_name: session.owner_name || '',
+    total_items: items.length,
     total_weight: totalWeight,
-    items: items?.map(item => ({
+    items: items.map(item => ({
       id: item.id,
       session_id: item.session_id,
       category_id: item.category_id,
@@ -197,7 +199,9 @@ export const getSessionWithItems = async (sessionId: string): Promise<SessionSum
       satuan: item.satuan,
       gabungan: item.gabungan,
       category: item.plastic_categories as unknown as PlasticCategory
-    })) || []
+    })),
+    start_time: session.start_time,
+    end_time: session.end_time
   };
 };
 
