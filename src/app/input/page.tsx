@@ -144,27 +144,23 @@ export default function InputPage() {
     return true;
   };
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const validateStep2 = () => {
     if (formData.items.length === 0) {
-      showToast('Tambah minimal satu item penimbangan', 'error');
+      showToast('Daftar riwayat masih kosong. Silakan tambah item ke daftar terlebih dahulu.', 'error');
       return false;
-    }
-    for (const item of formData.items) {
-      if (!item.category_id) {
-        showToast('Pilih jenis plastik untuk semua item', 'error');
-        return false;
-      }
-      if (item.weight_kg <= 0) {
-        showToast('Berat harus lebih dari 0', 'error');
-        return false;
-      }
     }
     return true;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitClick = () => {
     if (!validateStep2()) return;
+    setShowConfirmModal(true);
+  };
 
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setSubmitting(true);
     try {
       // v2.0: Record end time
@@ -475,7 +471,7 @@ export default function InputPage() {
                     Kembali
                   </Button>
                   <Button
-                    onClick={handleSubmit}
+                    onClick={handleSubmitClick}
                     disabled={submitting}
                     className="flex items-center gap-2 bg-secondary hover:bg-secondary/90"
                   >
@@ -487,6 +483,46 @@ export default function InputPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Save Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Konfirmasi Simpan Data</h3>
+                  <button 
+                    onClick={() => setShowConfirmModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+                
+                <p className="text-gray-600 mb-6">
+                  Apakah Anda yakin ingin menyimpan <span className="font-bold">{formData.items.length} item</span> data penimbangan ini ke dalam sistem?
+                </p>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSubmit}
+                    disabled={submitting}
+                    className="bg-secondary hover:bg-secondary/90 text-white"
+                  >
+                    {submitting ? 'Menyimpan...' : 'Ya, Simpan Data'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
