@@ -328,62 +328,81 @@ export default function InputPage() {
 
                 <div className="space-y-3">
                   {formData.items.map((item: { category_id: number; weight_kg: number; satuan?: 'SAK' | 'PRESS' | 'BAL' | ''; gabungan?: string }, index) => (
-                    <div key={index} className="flex gap-3 items-end p-4 border border-gray-200 rounded-lg">
-                      <div className="flex-1">
-                        <Select
-                          label="Jenis Plastik"
-                          value={item.category_id}
-                          onChange={(e) => updateItem(index, 'category_id', Number(e.target.value))}
-                          options={[
-                            { value: 0, label: '-- Pilih Jenis Plastik --' },
-                            ...getAvailableCategories().map(cat => ({
-                              value: cat.id,
-                              label: cat.name
-                            }))
-                          ]}
-                        />
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50/50 shadow-sm">
+                      {/* Mobile Header with Delete Button */}
+                      <div className="flex justify-between items-center mb-3 md:hidden">
+                        <span className="text-sm font-medium text-gray-500">Item #{index + 1}</span>
+                        <Button
+                          variant="ghost"
+                          onClick={() => removeItem(index)}
+                          className="text-red-500 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
+                          disabled={formData.items.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="flex-1">
-                        <Input
-                          type="number"
-                          label="Berat (kg)"
-                          placeholder="0.0"
-                          value={item.weight_kg || ''}
-                          onChange={(e) => updateItem(index, 'weight_kg', Number(e.target.value))}
-                          step="0.1"
-                          min="0"
-                        />
+
+                      <div className="flex flex-col md:flex-row gap-4 md:items-end w-full">
+                        <div className="grid grid-cols-2 gap-3 w-full md:flex md:flex-1 md:gap-3">
+                          <div className="col-span-2 md:flex-1">
+                            <Select
+                              label="Jenis Plastik"
+                              value={item.category_id}
+                              onChange={(e) => updateItem(index, 'category_id', Number(e.target.value))}
+                              options={[
+                                { value: 0, label: '-- Pilih Jenis Plastik --' },
+                                ...getAvailableCategories().map(cat => ({
+                                  value: cat.id,
+                                  label: cat.name
+                                }))
+                              ]}
+                            />
+                          </div>
+                          <div className="col-span-1 md:flex-1">
+                            <Input
+                              type="number"
+                              label="Berat (kg)"
+                              placeholder="0.0"
+                              value={item.weight_kg || ''}
+                              onChange={(e) => updateItem(index, 'weight_kg', Number(e.target.value))}
+                              step="0.1"
+                              min="0"
+                            />
+                          </div>
+                          <div className="col-span-1 md:flex-1">
+                            <Select
+                              label="Satuan"
+                              value={item.satuan || ''}
+                              onChange={(e) => updateItem(index, 'satuan', e.target.value)}
+                              options={[
+                                { value: '', label: '-- Pilih Satuan --' },
+                                { value: 'SAK', label: 'SAK' },
+                                { value: 'PRESS', label: 'PRESS' },
+                                { value: 'BAL', label: 'BAL' }
+                              ]}
+                            />
+                          </div>
+                          <div className="col-span-2 md:flex-1">
+                            <Input
+                              type="text"
+                              label="Gabungan"
+                              placeholder="Ketik keterangan..."
+                              value={item.gabungan || ''}
+                              onChange={(e) => updateItem(index, 'gabungan', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Desktop Delete Button */}
+                        <Button
+                          variant="ghost"
+                          onClick={() => removeItem(index)}
+                          className="hidden md:flex text-red-500 hover:bg-red-50 mb-0.5 px-3"
+                          disabled={formData.items.length === 1}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
                       </div>
-                      <div className="flex-1">
-                        <Select
-                          label="Satuan"
-                          value={item.satuan || ''}
-                          onChange={(e) => updateItem(index, 'satuan', e.target.value)}
-                          options={[
-                            { value: '', label: '-- Pilih Satuan (Opsional) --' },
-                            { value: 'SAK', label: 'SAK' },
-                            { value: 'PRESS', label: 'PRESS' },
-                            { value: 'BAL', label: 'BAL' }
-                          ]}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <Input
-                          type="text"
-                          label="Gabungan"
-                          placeholder="Gabungan"
-                          value={item.gabungan || ''}
-                          onChange={(e) => updateItem(index, 'gabungan', e.target.value)}
-                        />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => removeItem(index)}
-                        className="text-red-500 hover:text-red-700"
-                        disabled={formData.items.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
