@@ -38,19 +38,17 @@ export default function InputPage() {
 
   const [formData, setFormData, clearFormData] = useLocalStorage<FormData>('input-form-data', initialFormData);
 
+  // New state for the static input form
+  const [currentItem, setCurrentItem] = useState<{ category_id: number; weight_kg: number | ''; satuan: string; gabungan: string }>({
+    category_id: 0,
+    weight_kg: '',
+    satuan: '',
+    gabungan: ''
+  });
+
   useEffect(() => {
     fetchCategories();
   }, []);
-
-  // Add an empty item if no items exist when switching to step 2
-  useEffect(() => {
-    if (step === 2 && formData.items.length === 0) {
-      setFormData(prev => ({
-        ...prev,
-        items: [{ category_id: 0, weight_kg: 0, satuan: '', gabungan: '' }]
-      }));
-    }
-  }, [step, formData.items.length, setFormData]);
 
   const fetchCategories = async () => {
     try {
@@ -78,32 +76,51 @@ export default function InputPage() {
     }));
   };
 
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { category_id: 0, weight_kg: 0, satuan: '', gabungan: '' }]
-    }));
-  };
-
-  const removeItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateItem = (index: number, field: 'category_id' | 'weight_kg' | 'satuan' | 'gabungan', value: number | string) => {
+  const updateCurrentItem = (field: 'category_id' | 'weight_kg' | 'satuan' | 'gabungan', value: number | string) => {
     // v2.0: Track start time on first weight input
     if (field === 'weight_kg' && value && Number(value) > 0 && !startTime) {
       setStartTime(new Date());
       console.log('[Time Tracking] Start time recorded:', new Date().toISOString());
     }
 
+    setCurrentItem(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const addItemToList = () => {
+    if (!currentItem.category_id) {
+      showToast('Pilih jenis plastik', 'error');
+      return;
+    }
+    if (!currentItem.weight_kg || Number(currentItem.weight_kg) <= 0) {
+      showToast('Berat harus diisi dan lebih dari 0', 'error');
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
+      // Add new item to the top of the list
+      items: [
+        {
+          category_id: currentItem.category_id,
+          weight_kg: Number(currentItem.weight_kg),
+          satuan: currentItem.satuan as any,
+          gabungan: currentItem.gabungan
+        },
+        ...prev.items
+      ]
+    }));
+
+    // Reset weight and gabungan, but keep category and satuan to speed up multiple similar entries
+    setCurrentItem(prev => ({ ...prev, weight_kg: '', gabungan: '' }));
+  };
+
+  const removeItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
     }));
   };
 
@@ -314,109 +331,141 @@ export default function InputPage() {
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-gray-900">Input Item Penimbangan</h2>
-                  <Button
-                    variant="outline"
-                    onClick={() => setFormData(prev => ({ ...prev, showAllCategories: !prev.showAllCategories }))}
-                    size="sm"
-                  >
-                    {formData.showAllCategories ? 'Tampilkan Dipilih' : 'Tampilkan Semua'}
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  {formData.items.map((item: { category_id: number; weight_kg: number; satuan?: 'SAK' | 'PRESS' | 'BAL' | ''; gabungan?: string }, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50/50 shadow-sm">
-                      {/* Mobile Header with Delete Button */}
-                      <div className="flex justify-between items-center mb-3 md:hidden">
-                        <span className="text-sm font-medium text-gray-500">Item #{index + 1}</span>
-                        <Button
-                          variant="ghost"
-                          onClick={() => removeItem(index)}
-                          className="text-red-500 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
-                          disabled={formData.items.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+              <div className="space-y-8">
+                {/* Bagian Atas: Form Input Statis */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-900">Input Berat Barang</h2>
+                    <Button
+                      variant="outline"
+                      onClick={() => setFormData(prev => ({ ...prev, showAllCategories: !prev.showAllCategories }))}
+                      size="sm"
+                    >
+                      {formData.showAllCategories ? 'Tampilkan Dipilih' : 'Tampilkan Semua'}
+                    </Button>
+                  </div>
+                  
+                  <div className="p-5 border-2 border-primary/20 rounded-xl bg-primary/5">
+                    <div className="grid grid-cols-2 gap-4 w-full md:flex md:flex-row md:items-end">
+                      <div className="col-span-2 md:flex-1">
+                        <Select
+                          label="Jenis Plastik"
+                          value={currentItem.category_id}
+                          onChange={(e) => updateCurrentItem('category_id', Number(e.target.value))}
+                          options={[
+                            { value: 0, label: '-- Pilih Jenis Plastik --' },
+                            ...getAvailableCategories().map(cat => ({
+                              value: cat.id,
+                              label: cat.name
+                            }))
+                          ]}
+                        />
                       </div>
-
-                      <div className="flex flex-col md:flex-row gap-4 md:items-end w-full">
-                        <div className="grid grid-cols-2 gap-3 w-full md:flex md:flex-1 md:gap-3">
-                          <div className="col-span-2 md:flex-1">
-                            <Select
-                              label="Jenis Plastik"
-                              value={item.category_id}
-                              onChange={(e) => updateItem(index, 'category_id', Number(e.target.value))}
-                              options={[
-                                { value: 0, label: '-- Pilih Jenis Plastik --' },
-                                ...getAvailableCategories().map(cat => ({
-                                  value: cat.id,
-                                  label: cat.name
-                                }))
-                              ]}
-                            />
-                          </div>
-                          <div className="col-span-1 md:flex-1">
-                            <Input
-                              type="number"
-                              label="Berat (kg)"
-                              placeholder="0.0"
-                              value={item.weight_kg || ''}
-                              onChange={(e) => updateItem(index, 'weight_kg', Number(e.target.value))}
-                              step="0.1"
-                              min="0"
-                            />
-                          </div>
-                          <div className="col-span-1 md:flex-1">
-                            <Select
-                              label="Satuan"
-                              value={item.satuan || ''}
-                              onChange={(e) => updateItem(index, 'satuan', e.target.value)}
-                              options={[
-                                { value: '', label: '-- Pilih Satuan --' },
-                                { value: 'SAK', label: 'SAK' },
-                                { value: 'PRESS', label: 'PRESS' },
-                                { value: 'BAL', label: 'BAL' }
-                              ]}
-                            />
-                          </div>
-                          <div className="col-span-2 md:flex-1">
-                            <Input
-                              type="text"
-                              label="Gabungan"
-                              placeholder="Ketik keterangan..."
-                              value={item.gabungan || ''}
-                              onChange={(e) => updateItem(index, 'gabungan', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Desktop Delete Button */}
-                        <Button
-                          variant="ghost"
-                          onClick={() => removeItem(index)}
-                          className="hidden md:flex text-red-500 hover:bg-red-50 mb-0.5 px-3"
-                          disabled={formData.items.length === 1}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
+                      <div className="col-span-1 md:flex-1">
+                        <Input
+                          type="number"
+                          label="Berat (kg)"
+                          placeholder="0.0"
+                          value={currentItem.weight_kg}
+                          onChange={(e) => updateCurrentItem('weight_kg', e.target.value)}
+                          step="0.1"
+                          min="0"
+                        />
+                      </div>
+                      <div className="col-span-1 md:flex-1">
+                        <Select
+                          label="Satuan"
+                          value={currentItem.satuan}
+                          onChange={(e) => updateCurrentItem('satuan', e.target.value)}
+                          options={[
+                            { value: '', label: '-- Pilih Satuan --' },
+                            { value: 'SAK', label: 'SAK' },
+                            { value: 'PRESS', label: 'PRESS' },
+                            { value: 'BAL', label: 'BAL' }
+                          ]}
+                        />
+                      </div>
+                      <div className="col-span-2 md:flex-1">
+                        <Input
+                          type="text"
+                          label="Gabungan"
+                          placeholder="Ketik keterangan..."
+                          value={currentItem.gabungan}
+                          onChange={(e) => updateCurrentItem('gabungan', e.target.value)}
+                        />
                       </div>
                     </div>
-                  ))}
+                    
+                    <div className="mt-4">
+                      <Button
+                        onClick={addItemToList}
+                        className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-6"
+                      >
+                        <Plus className="h-5 w-5 mr-2" />
+                        TAMBAH KE DAFTAR
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
-                <Button
-                  onClick={addItem}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tambah Item
-                </Button>
+                {/* Bagian Bawah: Daftar Riwayat Item */}
+                {formData.items.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-gray-700 font-medium pb-2 border-b border-gray-200">
+                      <div className="h-6 w-6 bg-gray-100 border border-gray-200 rounded-md flex items-center justify-center text-xs font-bold">
+                        {formData.items.length}
+                      </div>
+                      <h3>Riwayat Item Ditambahkan</h3>
+                    </div>
 
-                <div className="flex justify-between">
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                      {formData.items.map((item: any, index) => {
+                        const categoryName = categories.find(c => c.id === item.category_id)?.name || 'Unknown';
+                        return (
+                          <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-900 text-lg">
+                                {categoryName}
+                              </span>
+                              <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                                {item.gabungan && (
+                                  <>
+                                    <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{item.gabungan}</span>
+                                  </>
+                                )}
+                                {item.satuan && (
+                                  <span className="text-gray-400">{item.satuan}</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <span className="font-bold text-xl text-primary">{item.weight_kg}</span>
+                                <span className="text-sm text-gray-500 ml-1">kg</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                onClick={() => removeItem(index)}
+                                className="text-red-500 hover:bg-red-50 h-10 w-10 p-2 rounded-full"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {formData.items.length === 0 && (
+                  <div className="py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                    <p className="text-gray-500">Belum ada item yang ditambahkan ke daftar.</p>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-6 border-t border-gray-100">
                   <Button
                     variant="outline"
                     onClick={() => setStep(1)}
