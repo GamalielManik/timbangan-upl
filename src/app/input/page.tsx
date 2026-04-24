@@ -141,6 +141,10 @@ export default function InputPage() {
       showToast('Nama pemilik harus diisi', 'error');
       return false;
     }
+    if (!formData.jenis_kendaraan) {
+      showToast('Jenis kendaraan harus dipilih', 'error');
+      return false;
+    }
     if (formData.selected_categories.length === 0) {
       showToast('Pilih minimal satu kategori plastik', 'error');
       return false;
@@ -296,9 +300,10 @@ export default function InputPage() {
                       required
                     />
                     <Select
-                      label="Jenis Kendaraan (Opsional)"
+                      label="Jenis Kendaraan"
                       value={formData.jenis_kendaraan || ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, jenis_kendaraan: e.target.value }))}
+                      required
                       options={[
                         { value: '', label: '-- Pilih Kendaraan --' },
                         { value: 'Tronton', label: 'Tronton' },
