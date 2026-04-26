@@ -1,0 +1,17 @@
+{
+  "name": "Barang Masuk UPL",
+  "short_name": "Timbangan UPL",
+  "description": "Aplikasi Pencatatan Penimbangan Limbah Plastik",
+  "start_url": "/timbangan-upl/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/timbangan-upl/logo.png",
+      "sizes": "192x192 512x512 any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
