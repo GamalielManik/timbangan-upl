@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from './utils';
-import { Home, PlusCircle, Clock, FileText, Menu, X, Bell, BellRing } from 'lucide-react';
+import { Home, PlusCircle, Clock, FileText, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 const navigation = [
   { name: 'Beranda', href: '/', icon: Home },
@@ -17,18 +16,6 @@ const navigation = [
 export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isSupported, isSubscribed, loading, subscribeToPush } = usePushNotifications();
-  
-  const handleSubscribe = async () => {
-    // VAPID Public Key from environment or hardcoded if safe (it is public anyway)
-    // For now we use the process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!vapidKey) {
-      alert("VAPID Public Key belum dikonfigurasi.");
-      return;
-    }
-    await subscribeToPush(vapidKey);
-  };
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -88,24 +75,6 @@ export function Navigation() {
                 </Link>
               );
             })}
-            
-            {/* Push Notification Button */}
-            {isSupported && (
-              <button
-                onClick={handleSubscribe}
-                disabled={isSubscribed || loading}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  isSubscribed 
-                    ? 'text-green-600 bg-green-50' 
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                )}
-                title={isSubscribed ? "Notifikasi Aktif" : "Aktifkan Notifikasi"}
-              >
-                {isSubscribed ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-                {loading ? 'Memproses...' : isSubscribed ? 'Notifikasi Aktif' : 'Aktifkan Notif'}
-              </button>
-            )}
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -173,23 +142,6 @@ export function Navigation() {
               </Link>
             );
           })}
-          
-          {/* Mobile Push Notification Button */}
-          {isSupported && (
-            <button
-              onClick={handleSubscribe}
-              disabled={isSubscribed || loading}
-              className={cn(
-                'w-full flex items-center gap-3 px-6 py-4 text-base font-medium transition-colors border-l-4',
-                isSubscribed 
-                  ? 'text-green-600 bg-green-50 border-green-600' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50 border-transparent'
-              )}
-            >
-              {isSubscribed ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
-              {loading ? 'Memproses...' : isSubscribed ? 'Notifikasi Aktif' : 'Aktifkan Notif'}
-            </button>
-          )}
         </div>
 
         {/* Mobile Menu Footer */}
