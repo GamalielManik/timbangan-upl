@@ -177,9 +177,11 @@ export default function HistoryPage() {
       const year = date.getFullYear().toString();
       const month = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
-      // Calculate week of month
-      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-      const weekNumber = Math.ceil(((date.getTime() - firstDay.getTime()) / 86400000 + firstDay.getDay() + 1) / 7);
+      // Calculate week of month (Monday - Sunday)
+      const dateDate = date.getDate();
+      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+      const adjustedFirstDay = firstDay === 0 ? 7 : firstDay;
+      const weekNumber = Math.ceil((dateDate + adjustedFirstDay - 1) / 7);
       const week = `Minggu ke-${weekNumber}`;
 
       if (!grouped[year]) {

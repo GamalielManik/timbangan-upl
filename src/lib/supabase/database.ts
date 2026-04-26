@@ -333,9 +333,9 @@ export const getWeeklyDashboard = async (): Promise<WeeklyDashboard[]> => {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
-    // Build the query with explicit date format
-    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
-    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    // Build the query with explicit date format avoiding timezone shift
+    const startDateStr = formatDateLocal(startOfWeek);
+    const endDateStr = formatDateLocal(endOfWeek);
 
     console.log('[Dashboard] Filtering sessions between:', startDateStr, 'and', endDateStr);
 
@@ -430,14 +430,22 @@ const getCurrentWeekDates = () => {
   return { startOfWeek, endOfWeek };
 };
 
+// Helper function to format local date to YYYY-MM-DD
+const formatDateLocal = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export const getThisWeekTotal = async (): Promise<number> => {
   try {
     // Get current week dates (Monday to Sunday)
     const { startOfWeek, endOfWeek } = getCurrentWeekDates();
 
-    // Build the query with explicit date format
-    const startDateStr = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
-    const endDateStr = endOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD
+    // Build the query with explicit date format avoiding timezone shift
+    const startDateStr = formatDateLocal(startOfWeek);
+    const endDateStr = formatDateLocal(endOfWeek);
 
     console.log('Filtering sessions between:', startDateStr, 'and', endDateStr);
 
@@ -505,8 +513,8 @@ export const getThisWeekSessionCount = async (): Promise<number> => {
     const { data, error } = await supabase
       .from('weighing_sessions')
       .select('id, transaction_date')
-      .gte('transaction_date', startOfWeek.toISOString())
-      .lte('transaction_date', endOfWeek.toISOString());
+      .gte('transaction_date', formatDateLocal(startOfWeek))
+      .lte('transaction_date', formatDateLocal(endOfWeek));
 
     if (error) {
       console.error('Error fetching this week sessions:', error);

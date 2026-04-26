@@ -13,33 +13,16 @@ import Link from 'next/link';
 // Function to get current week number in the month (Monday-Sunday based)
 const getCurrentWeekNumber = () => {
   const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  // Get the first day of the month
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-
-  // Find the first Monday of the month
-  const firstMonday = new Date(firstDayOfMonth);
-  let dayOfWeek = firstMonday.getDay();
-  let daysToAdd = dayOfWeek === 1 ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
-  firstMonday.setDate(firstDayOfMonth.getDate() + daysToAdd);
-
-  // If the first Monday is in the next month, use the first day of month as week 1
-  if (firstMonday.getMonth() !== currentMonth) {
-    firstMonday.setTime(firstDayOfMonth.getTime());
-  }
-
-  // If today is before the first Monday, it's week 1
-  if (today < firstMonday) {
-    return 1;
-  }
-
-  // Calculate weeks since first Monday
-  const daysSinceFirstMonday = Math.floor((today.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
-  const weekNumber = Math.floor(daysSinceFirstMonday / 7) + 1;
-
-  return weekNumber;
+  const date = today.getDate();
+  const day = today.getDay(); // 0 (Sun) - 6 (Sat)
+  
+  // Find the first day of the month
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+  // Adjust so Monday is 1, Sunday is 7
+  const adjustedFirstDay = firstDay === 0 ? 7 : firstDay;
+  
+  // Calculate week number based on Monday-Sunday week
+  return Math.ceil((date + adjustedFirstDay - 1) / 7);
 };
 
 export default function Dashboard() {
