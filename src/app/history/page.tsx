@@ -564,7 +564,28 @@ export default function HistoryPage() {
                         </label>
                         <p className="text-sm font-semibold text-primary">
                           {(() => {
-                            const duration = new Date(selectedSession.end_time).getTime() - new Date(selectedSession.start_time).getTime();
+                            const start = new Date(selectedSession.start_time!);
+                            const end = new Date(selectedSession.end_time!);
+                            let duration = end.getTime() - start.getTime();
+
+                            // Potong waktu istirahat (12:00 - 13:00) jika penimbangan melewati jam tersebut pada hari yang sama
+                            if (start.getFullYear() === end.getFullYear() && 
+                                start.getMonth() === end.getMonth() && 
+                                start.getDate() === end.getDate()) {
+                                
+                                const lunchStart = new Date(start);
+                                lunchStart.setHours(12, 0, 0, 0);
+                                
+                                const lunchEnd = new Date(start);
+                                lunchEnd.setHours(13, 0, 0, 0);
+                                
+                                const overlapStart = Math.max(start.getTime(), lunchStart.getTime());
+                                const overlapEnd = Math.min(end.getTime(), lunchEnd.getTime());
+                                
+                                const overlapDuration = Math.max(0, overlapEnd - overlapStart);
+                                duration -= overlapDuration;
+                            }
+
                             const minutes = Math.floor(duration / 60000);
                             const seconds = Math.floor((duration % 60000) / 1000);
                             return `${minutes} menit ${seconds} detik`;
