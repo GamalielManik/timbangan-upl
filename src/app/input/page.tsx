@@ -27,8 +27,9 @@ export default function InputPage() {
   // New state for category search
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
 
-  // v2.0: Time tracking state
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  // v2.0: Time tracking state - persist in localStorage so it survives page refresh/navigation
+  const [startTimeISO, setStartTimeISO, clearStartTime] = useLocalStorage<string | null>('input-start-time', null);
+  const startTime = startTimeISO ? new Date(startTimeISO) : null;
 
   const initialFormData: FormData = {
     transaction_date: new Date().toISOString().split('T')[0],
@@ -83,7 +84,7 @@ export default function InputPage() {
   const updateCurrentItem = (field: 'category_id' | 'weight_kg' | 'satuan' | 'gabungan', value: number | string) => {
     // v2.0: Track start time on first weight input
     if (field === 'weight_kg' && value && Number(value) > 0 && !startTime) {
-      setStartTime(new Date());
+      setStartTimeISO(new Date().toISOString());
       console.log('[Time Tracking] Start time recorded:', new Date().toISOString());
     }
 
@@ -201,7 +202,7 @@ export default function InputPage() {
       // Clear localStorage and reset form
       clearFormData();
       clearStep();
-      setStartTime(null); // v2.0: Reset start time
+      clearStartTime(); // v2.0: Reset start time
     } catch (error) {
       console.error('Error submitting data:', error);
       showToast('Gagal menyimpan data. Silakan coba lagi.', 'error');
